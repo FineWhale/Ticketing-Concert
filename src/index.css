@@ -1,13 +1,218 @@
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
+
+/* FORCE INTER */
+*,
+*::before,
+*::after {
+    font-family: "Inter", sans-serif !important;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+html,
+body,
+#root {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+}
+
+/* HEADER */
+.header-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 72px;
+    background: #2e7d1f;
+    padding: 0 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 100;
+}
+
+.logo-header {
+    height: 40px;
+    object-fit: contain;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    font-size: 14px;
+    font-weight: 500 !important;
+    color: #ffffff;
+}
+
+.contact-link {
+    cursor: pointer;
+}
+
+.book-btn {
+    padding: 8px 20px;
+    border-radius: 999px;
+    border: none;
+    background: #ffc400;
+    color: #1a1a1a;
+    font-weight: 700 !important;
+    cursor: pointer;
+}
+
+.book-btn:hover {
+    filter: brightness(0.95);
+}
+
+/* BEACH IMAGE CONTAINER */
+.left-section {
+    position: fixed;
+    top: 72px;
+    left: 0;
+    bottom: 0;
+    width: 50vw;
+    z-index: 1;
+    overflow: hidden;
+}
+
+.left-section img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0.05),
+        rgba(0, 0, 0, 0.15)
+    );
+    z-index: 2;
+}
+
+/* FORM SECTION */
+.right-section {
+    padding: 40px 80px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: #ffffff;
+    margin-left: 50vw;
+    min-height: calc(100vh - 72px);
+    position: relative;
+    z-index: 10;
+}
+
+.auth-page {
+    min-height: 100vh;
+    background: #ffffff;
+}
+
+.auth-container {
+    width: 100%;
+    margin-top: 72px;
+    position: relative;
+}
+
+.auth-form {
+    width: 360px;
+    max-width: 100%;
+    margin: 0;
+}
+
+.auth-title {
+    font-size: 22px;
+    font-weight: 700 !important;
+    color: #1a1a1a;
+    margin-bottom: 12px;
+    text-align: left;
+}
+
+.auth-subtitle {
+    color: #666;
+    margin-bottom: 28px;
+    text-align: left;
+    font-size: 12px;
+}
+
+.auth-form .ant-form-item-label > label {
+    font-weight: 500 !important;
+}
+
+.auth-form .ant-input,
+.auth-form .ant-input-affix-wrapper {
+    border-radius: 999px !important;
+    background: #f0f0f0 !important;
+    border: none !important;
+    padding: 0 18px !important;
+    height: 44px !important;
+    box-sizing: border-box;
+}
+
+.auth-form .ant-input {
+    height: 44px !important;
+    line-height: 44px !important;
+}
+
+.auth-form .ant-input-affix-wrapper > input.ant-input {
+    height: 44px !important;
+    line-height: 44px !important;
+    padding: 0 !important;
+    background: transparent !important;
+}
+
+.auth-form .ant-form-item-required::before {
+    display: inline-block;
+    margin-right: 4px;
+    color: #ff4d4f;
+    content: "*";
+}
+
+.submit-btn {
+    width: 220px !important;
+    height: 48px !important;
+    background: #2e7d1f !important;
+    border: none !important;
+    border-radius: 999px !important;
+    font-size: 18px !important;
+    font-weight: 700 !important;
+    box-shadow: none !important;
+}
+
+.submit-btn:hover {
+    background: #276718 !important;
+}
+
+.bottom-text {
+    text-align: left;
+    margin-top: 40px;
+    color: #000000;
+    font-size: 14px;
+}
+
+.link-btn {
+    color: #2e7d1f;
+    cursor: pointer;
+    margin-left: 4px;
+}
+
+.link-btn:hover {
+    text-decoration: underline;
+}
+
+/* MOBILE */
+@media (max-width: 900px) {
+    .left-section {
+        width: 100vw;
+    }
+    .right-section {
+        margin-left: 0;
+        width: 100%;
+        padding: 20px;
+    }
 }
