@@ -23,7 +23,7 @@ const LoginPage: React.FC = () => {
 
       <div className="auth-container">
         <div className="left-section">
-          <img src="public/images/beachboy-login.jpg" alt="Beach" />
+          <img src="/images/beachboys-login.jpg" alt="Beach" />
           <div className="overlay" />
         </div>
 
