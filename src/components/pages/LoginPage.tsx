@@ -1,6 +1,8 @@
 import React from "react";
-import { Form, Input, Typography, Button } from "antd";
+import { Form, Input, Button, Typography } from "antd";
 import { useNavigate } from "react-router-dom";
+import { Header } from "../organisms";
+import { AuthTemplate } from "../templates";
 
 const { Title, Text } = Typography;
 
@@ -12,73 +14,61 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="auth-page">
-      <div className="header-bar">
-        <img src="/images/logo.png" alt="Logo" className="logo-header" />
-        <div className="header-actions">
-          <span className="contact-link">Contact</span>
-          <button className="book-btn">Book Now</button>
-        </div>
-      </div>
+    <AuthTemplate
+      header={
+        <Header
+          onContactClick={() => console.log("Contact clicked")}
+          onBookClick={() => console.log("Book Now clicked")}
+        />
+      }
+    >
+      <Form
+        name="login"
+        onFinish={onFinish}
+        className="auth-form"
+        layout="vertical"
+      >
+        <Title className="auth-title">Login</Title>
 
-      <div className="auth-container">
-        <div className="left-section">
-          <img src="/images/beachboys-login.jpg" alt="Beach" />
-          <div className="overlay" />
-        </div>
+        <Form.Item
+          name="email"
+          label="Email"
+          rules={[
+            {
+              required: true,
+              type: "email",
+              message: "Valid email required",
+            },
+          ]}
+        >
+          <Input placeholder="Enter your email" />
+        </Form.Item>
 
-        <div className="right-section">
-          <Form
-            name="login"
-            onFinish={onFinish}
-            className="auth-form"
-            layout="vertical"
+        <Form.Item
+          name="password"
+          label="Password"
+          rules={[{ required: true, message: "Password required" }]}
+        >
+          <Input.Password placeholder="Enter your password" />
+        </Form.Item>
+
+        <Form.Item className="auth-form-button-wrapper">
+          <Button type="primary" htmlType="submit" className="submit-btn">
+            Login
+          </Button>
+        </Form.Item>
+
+        <Text className="auth-links">
+          <span className="auth-links-text">Don't have an account? </span>
+          <span
+            className="auth-links-link"
+            onClick={() => navigate("/register")}
           >
-            <Title className="auth-title">Login</Title>
-
-            <Form.Item
-              name="email"
-              label="Email"
-              rules={[
-                {
-                  required: true,
-                  type: "email",
-                  message: "Valid email required",
-                },
-              ]}
-            >
-              <Input placeholder="Enter your email" />
-            </Form.Item>
-
-            <Form.Item
-              name="password"
-              label="Password"
-              rules={[{ required: true, message: "Password required" }]}
-            >
-              <Input.Password placeholder="Enter your password" />
-            </Form.Item>
-
-            <Form.Item>
-              <Button
-                type="primary"
-                htmlType="submit"
-                block
-                className="submit-btn"
-              >
-                Login
-              </Button>
-            </Form.Item>
-
-            <Text className="bottom-text">
-              Don't have an account?{" "}
-              <span className="link-btn" onClick={() => navigate("/register")}>
-                Register here
-              </span>
-            </Text>
-          </Form>
-        </div>
-      </div>
-    </div>
+            Register here
+          </span>
+        </Text>
+      </Form>
+    </AuthTemplate>
   );
 };
 
