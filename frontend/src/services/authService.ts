@@ -55,7 +55,11 @@ class AuthService {
 
       return response.data;
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || "Login failed");
+      const errMsg =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        "Login failed";
+      throw new Error(errMsg);
     }
   }
 

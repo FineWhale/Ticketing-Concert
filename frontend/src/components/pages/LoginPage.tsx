@@ -1,16 +1,28 @@
-import React from "react";
-import { Form, Input, Button, Typography } from "antd";
+import React, { useState } from "react";
+import { Form, Input, Button, Typography, message } from "antd";
 import { useNavigate } from "react-router-dom";
 import { Header } from "../organisms";
 import { AuthTemplate } from "../templates";
+import { useAuthContext } from "../../context/AuthContext";
 
 const { Title, Text } = Typography;
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const { login } = useAuthContext();
+  const [loading, setLoading] = useState(false);
 
-  const onFinish = (values: any) => {
-    console.log("Login:", values);
+  const onFinish = async (values: { email: string; password: string }) => {
+    try {
+      setLoading(true);
+      await login({ email: values.email, password: values.password });
+      message.success("Login successful!");
+      navigate("/");
+    } catch (error: any) {
+      message.error(error.message || "Invalid email or password");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -53,7 +65,7 @@ const LoginPage: React.FC = () => {
         </Form.Item>
 
         <Form.Item className="auth-form-button-wrapper">
-          <Button type="primary" htmlType="submit" className="submit-btn">
+          <Button type="primary" htmlType="submit" className="submit-btn" loading={loading}>
             Login
           </Button>
         </Form.Item>
