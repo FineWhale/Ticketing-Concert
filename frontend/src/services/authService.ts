@@ -1,6 +1,7 @@
 import axios, { AxiosInstance } from "axios";
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:5000/api";
+const API_BASE_URL =
+  process.env.REACT_APP_API_BASE_URL || "http://localhost:5000/api";
 
 class AuthService {
   private api: AxiosInstance;
@@ -24,7 +25,7 @@ class AuthService {
       },
       (error) => {
         return Promise.reject(error);
-      }
+      },
     );
 
     // Add response interceptor for error handling
@@ -37,7 +38,7 @@ class AuthService {
           window.location.href = "/login";
         }
         return Promise.reject(error);
-      }
+      },
     );
   }
 
@@ -65,7 +66,12 @@ class AuthService {
     password: string;
   }) {
     try {
-      const response = await this.api.post("/auth/register", data);
+      const response = await this.api.post("/auth/register", {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        password: data.password,
+      });
 
       if (response.data.token) {
         localStorage.setItem("authToken", response.data.token);

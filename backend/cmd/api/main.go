@@ -95,7 +95,7 @@ func setupRouter(cfg *config.Config, authHandler *handlers.AuthHandler) *gin.Eng
 			protected.Use(middleware.AuthMiddleware(cfg.JWTSecret))
 			{
 				protected.GET("/me", authHandler.GetCurrentUser)
-				protected.POST("/logout", authHandler.Logout)
+				// protected.POST("/logout", authHandler.Logout)
 			}
 		}
 	}

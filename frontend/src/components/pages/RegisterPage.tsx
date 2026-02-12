@@ -1,16 +1,29 @@
-import React from "react";
-import { Form, Input, Button, Typography } from "antd";
+import React, { useState } from "react";
+import { Form, Input, Button, Typography, message } from "antd";
 import { useNavigate } from "react-router-dom";
 import { Header } from "../organisms";
 import { AuthTemplate } from "../templates";
+import { authService } from "../../services/authService";
 
 const { Title, Text } = Typography;
 
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
 
-  const onFinish = (values: any) => {
+  const onFinish = async (values: any) => {
     console.log("Register:", values);
+
+    try {
+      setLoading(true);
+      await authService.register(values);
+      message.success("Registration successful!");
+      navigate("/");
+    } catch (error: any) {
+      message.error(error.message || "Registration failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -69,7 +82,12 @@ const RegisterPage: React.FC = () => {
         </Form.Item>
 
         <Form.Item className="auth-form-button-wrapper">
-          <Button type="primary" htmlType="submit" className="submit-btn">
+          <Button
+            type="primary"
+            htmlType="submit"
+            className="submit-btn"
+            loading={loading}
+          >
             Create Account
           </Button>
         </Form.Item>
