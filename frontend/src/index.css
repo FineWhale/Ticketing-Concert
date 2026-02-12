@@ -113,6 +113,21 @@ body,
     position: relative;
 }
 
+.profile-content {
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 48px 24px;
+}
+
+.profile-info {
+    margin-bottom: 12px;
+    font-size: 16px;
+}
+
+.profile-info .ant-typography {
+    font-size: 16px !important;
+}
+
 .auth-form {
     width: 520px;
     max-width: 100%;
