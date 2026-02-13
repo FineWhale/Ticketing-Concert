@@ -37,14 +37,14 @@ const LoginPage: React.FC = () => {
       <Form
         name="login"
         onFinish={onFinish}
-        className="auth-form"
+        className="w-[520px] max-w-full m-0"
         layout="vertical"
       >
-        <Title className="auth-title">Login</Title>
+        <Title className="text-4xl font-bold text-[#1a1a1a] mb-10 text-left !mb-10">Login</Title>
 
         <Form.Item
           name="email"
-          label="Email"
+          label={<span className="font-normal text-[15px] text-[#1a1a1a]">Email</span>}
           rules={[
             {
               required: true,
@@ -53,27 +53,38 @@ const LoginPage: React.FC = () => {
             },
           ]}
         >
-          <Input placeholder="Enter your email" />
+          <Input 
+            placeholder="Enter your email" 
+            className="!rounded-full !bg-[#f0f0f0] !border-none !px-6 !h-14 !text-base [&.ant-input-focused]:!bg-[#e8e8e8] [&.ant-input-focused]:!shadow-none [&.ant-input-focused]:!border-transparent"
+          />
         </Form.Item>
 
         <Form.Item
           name="password"
-          label="Password"
+          label={<span className="font-normal text-[15px] text-[#1a1a1a]">Password</span>}
           rules={[{ required: true, message: "Password required" }]}
         >
-          <Input.Password placeholder="Enter your password" />
+          <Input.Password 
+            placeholder="Enter your password"
+            className="[&_.ant-input-affix-wrapper]:!rounded-full [&_.ant-input-affix-wrapper]:!bg-[#f0f0f0] [&_.ant-input-affix-wrapper]:!border-none [&_.ant-input-affix-wrapper]:!px-6 [&_.ant-input-affix-wrapper]:!h-14 [&_.ant-input-affix-wrapper.ant-input-affix-wrapper-focused]:!bg-[#e8e8e8] [&_.ant-input-affix-wrapper.ant-input-affix-wrapper-focused]:!shadow-none [&_.ant-input-affix-wrapper.ant-input-affix-wrapper-focused]:!border-transparent [&_input]:!h-14 [&_input]:!leading-[56px] [&_input]:!p-0 [&_input]:!bg-transparent"
+          />
         </Form.Item>
 
-        <Form.Item className="auth-form-button-wrapper">
-          <Button type="primary" htmlType="submit" className="submit-btn" loading={loading}>
+        <Form.Item className="flex justify-center mt-12 [&_.ant-form-item-control-input-content]:flex [&_.ant-form-item-control-input-content]:justify-center">
+          <Button 
+            type="primary" 
+            htmlType="submit" 
+            className="!w-[260px] !h-14 !text-xl !font-semibold !bg-primary !border-none !rounded-full hover:!bg-primary-dark focus:!bg-primary-dark active:!bg-primary-dark"
+            loading={loading}
+          >
             Login
           </Button>
         </Form.Item>
 
-        <Text className="auth-links">
-          <span className="auth-links-text">Don't have an account? </span>
+        <Text className="text-left mt-10 block">
+          <span className="text-[#000000] text-[15px]">Don't have an account? </span>
           <span
-            className="auth-links-link"
+            className="text-primary cursor-pointer text-[15px] hover:underline"
             onClick={() => navigate("/register")}
           >
             Register here

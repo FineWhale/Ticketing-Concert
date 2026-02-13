@@ -15,29 +15,32 @@ export const Header: React.FC<HeaderProps> = ({
   const { isAuthenticated } = useAuthContext();
 
   return (
-    <div className="header-bar">
-      <img src="/images/logo.png" alt="Logo" className="logo-header" />
-      <div className="header-actions">
-        <span className="contact-link" onClick={onContactClick}>
+    <div className="fixed top-0 left-0 right-0 h-[72px] bg-primary px-12 flex items-center justify-between z-[100]">
+      <img src="/images/logo.png" alt="Logo" className="h-10 object-contain" />
+      <div className="flex items-center gap-8 text-sm font-medium text-white">
+        <span className="cursor-pointer" onClick={onContactClick}>
           Contact
         </span>
         {isAuthenticated ? (
           <span
-            className="contact-link"
+            className="cursor-pointer"
             onClick={() => navigate("/profile")}
           >
             Profile
           </span>
         ) : (
           <span
-            className="contact-link"
+            className="cursor-pointer"
             onClick={() => navigate("/login")}
           >
             Login
           </span>
         )}
-        <button className="book-btn" onClick={onBookClick}>
-          Book Now
+        <button 
+          className="px-5 py-2 rounded-full border-none bg-yellow text-[#1a1a1a] font-bold cursor-pointer hover:brightness-95" 
+          onClick={onBookClick}
+        >
+          Book Ticket
         </button>
       </div>
     </div>
