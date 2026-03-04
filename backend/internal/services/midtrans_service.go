@@ -15,7 +15,7 @@ type MidtransService struct {
 
 func NewMidtransService(serverKey string) *MidtransService {
 	var client snap.Client
-	client.New(serverKey, midtrans.Sandbox) // ganti ke midtrans.Production kalau live
+	client.New(serverKey, midtrans.Sandbox)
 	return &MidtransService{client: client}
 }
 

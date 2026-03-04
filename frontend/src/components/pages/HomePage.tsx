@@ -1,22 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Header } from "../organisms";
+import { Header, Footer } from "../organisms";
 
-// ============================================================
-// TICKET CONFIG — edit di sini saja
-// ============================================================
 const TICKETS = [
   {
     id: 1,
     src: "/images/tix1.png",
     hoverImg: "/images/brianwilson.png",
-    top: 50, // px dari atas container
-    left: "25%", // dari kiri (bisa "25%" atau px: 300)
+    top: 50,
+    left: "25%",
     right: "auto",
-    width: 200, // lebar tiket dalam px
-    rotate: -15, // derajat kemiringan
-    scrollX: 0.05, // kecepatan gerak horizontal saat scroll (+ = kanan, - = kiri)
-    scrollY: 0.03, // kecepatan gerak vertikal saat scroll (+ = bawah, - = atas)
+    width: 200,
+    rotate: -15,
+    scrollX: 0.05,
+    scrollY: 0.03,
     zIndex: 3,
   },
   {
@@ -72,7 +69,6 @@ const TICKETS = [
     zIndex: 2,
   },
 ];
-// ============================================================
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -290,7 +286,6 @@ const HomePage: React.FC = () => {
           ))}
         </div>
 
-        {/* CURSOR GIMMICK */}
         {hoveredTicket !== null && (
           <div
             className="fixed pointer-events-none z-[9999] w-[150px] h-[150px] rounded-xl overflow-hidden shadow-[0_8px_24px_rgba(0,0,0,0.3)]"
@@ -330,99 +325,6 @@ const HomePage: React.FC = () => {
           </button>
         </div>
       </div>
-
-      <footer className="bg-white py-20 px-5 md:px-20 border-t border-[#e0e0e0]">
-        <div className="max-w-[1200px] mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_1fr] gap-15 mb-15">
-            <div>
-              <h3 className="text-lg font-bold text-[#1a1a1a] m-0 mb-4">
-                Namedly
-              </h3>
-              <p className="text-sm text-[#666] leading-relaxed m-0 mb-5">
-                lorem Ipsum dolor sit amet, consectetur adipiscing elit.
-              </p>
-              <div className="flex gap-4">
-                {["a", "b", "c"].map((l) => (
-                  <a
-                    key={l}
-                    href="#"
-                    className="w-8 h-8 flex items-center justify-center text-[#666] text-lg transition-colors duration-200 hover:text-[#1a1a1a]"
-                  >
-                    {l}
-                  </a>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <h4 className="text-base font-semibold text-[#1a1a1a] m-0 mb-5">
-                Features
-              </h4>
-              <ul className="list-none p-0 m-0">
-                {["Core features", "Pro experience", "Integrations"].map(
-                  (item) => (
-                    <li key={item} className="mb-3">
-                      <a
-                        href="#"
-                        className="text-sm text-[#666] no-underline transition-colors duration-200 hover:text-[#1a1a1a]"
-                      >
-                        {item}
-                      </a>
-                    </li>
-                  ),
-                )}
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="text-base font-semibold text-[#1a1a1a] m-0 mb-5">
-                Learn more
-              </h4>
-              <ul className="list-none p-0 m-0">
-                {[
-                  "Blog",
-                  "Case studies",
-                  "Customer stories",
-                  "Best practices",
-                ].map((item) => (
-                  <li key={item} className="mb-3">
-                    <a
-                      href="#"
-                      className="text-sm text-[#666] no-underline transition-colors duration-200 hover:text-[#1a1a1a]"
-                    >
-                      {item}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="text-base font-semibold text-[#1a1a1a] m-0 mb-5">
-                Support
-              </h4>
-              <ul className="list-none p-0 m-0">
-                {["Contact", "Support", "Legal"].map((item) => (
-                  <li key={item} className="mb-3">
-                    <a
-                      href="#"
-                      className="text-sm text-[#666] no-underline transition-colors duration-200 hover:text-[#1a1a1a]"
-                    >
-                      {item}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          <div className="text-center pt-10 border-t border-[#e0e0e0]">
-            <p className="text-sm text-[#666] m-0">
-              © 2026 Beach Boys Concert. All rights reserved.
-            </p>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 };
