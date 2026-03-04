@@ -5,27 +5,27 @@ export const Footer: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <footer className="bg-green-900  text-white pt-14 pb-8 mt-20">
+    <footer id="footer" className="bg-primary text-white pt-14 pb-8 mt-20">
       <div className="max-w-6xl mx-auto px-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-10">
-          {/* Brand */}
+          {/* brand */}
           <div>
             <h3 className="text-lg font-bold mb-1 leading-tight">
               The Beach Boys
             </h3>
-            <p className="text-sm text-gray-400 mb-4">60 Years of Pet Sounds</p>
-            <p className="text-xs text-gray-500 leading-relaxed">
+            <p className="text-sm text-white mb-4">60 Years of Pet Sounds</p>
+            <p className="text-xs text-white leading-relaxed">
               Rayakan 60 tahun album legendaris Pet Sounds bersama The Beach
               Boys dalam konser spektakuler di Jakarta.
             </p>
           </div>
 
-          {/* Event Info */}
+          {/* event Info */}
           <div>
-            <h4 className="text-sm font-semibold text-gray-300 mb-4 uppercase tracking-wider">
+            <h4 className="text-sm font-semibold text-white mb-4 uppercase tracking-wider">
               Info Event
             </h4>
-            <ul className="space-y-2 text-sm text-gray-400">
+            <ul className="space-y-2 text-sm text-white">
               <li className="flex items-center gap-2">
                 <span>📅</span>
                 <span>17 Agustus 2026</span>
@@ -45,16 +45,16 @@ export const Footer: React.FC = () => {
             </ul>
           </div>
 
-          {/* Navigation */}
+          {/* nav */}
           <div>
-            <h4 className="text-sm font-semibold text-gray-300 mb-4 uppercase tracking-wider">
+            <h4 className="text-sm font-semibold text-white mb-4 uppercase tracking-wider">
               Navigasi
             </h4>
-            <ul className="space-y-2 text-sm text-gray-400">
+            <ul className="space-y-2 text-sm text-white">
               <li>
                 <button
                   onClick={() => navigate("/")}
-                  className="hover:text-white transition-colors"
+                  className="hover:opacity-70 transition-opacity"
                 >
                   Beranda
                 </button>
@@ -62,7 +62,7 @@ export const Footer: React.FC = () => {
               <li>
                 <button
                   onClick={() => navigate("/book-ticket")}
-                  className="hover:text-white transition-colors"
+                  className="hover:opacity-70 transition-opacity"
                 >
                   Beli Tiket
                 </button>
@@ -70,7 +70,7 @@ export const Footer: React.FC = () => {
               <li>
                 <button
                   onClick={() => navigate("/orders")}
-                  className="hover:text-white transition-colors"
+                  className="hover:opacity-70 transition-opacity"
                 >
                   Pesanan Saya
                 </button>
@@ -78,7 +78,7 @@ export const Footer: React.FC = () => {
               <li>
                 <button
                   onClick={() => navigate("/profile")}
-                  className="hover:text-white transition-colors"
+                  className="hover:opacity-70 transition-opacity"
                 >
                   Profil
                 </button>
@@ -87,12 +87,12 @@ export const Footer: React.FC = () => {
           </div>
         </div>
 
-        {/* Divider */}
-        <div className="border-t border-gray-700 pt-6 flex flex-col sm:flex-row justify-between items-center gap-3">
-          <p className="text-xs text-gray-500">
+        {/* divider */}
+        <div className="border-t border-white/30 pt-6 flex flex-col sm:flex-row justify-between items-center gap-3">
+          <p className="text-xs text-white">
             © 2026 The Beach Boys — 60 Years of Pet Sounds. All rights reserved.
           </p>
-          <p className="text-xs text-gray-600">
+          <p className="text-xs text-white/70">
             Powered by Midtrans · Secured Payment
           </p>
         </div>

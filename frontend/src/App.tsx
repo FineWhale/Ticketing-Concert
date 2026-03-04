@@ -16,6 +16,7 @@ import BookTicketPage from "./components/pages/BookTicketPage";
 import CheckoutPage from "./components/pages/CheckoutPage";
 import OrdersPage from "./components/pages/OrdersPage";
 import { Footer } from "./components/organisms";
+import ScrollToTop from "./components/ScrollToTop";
 
 const AppContent: React.FC = () => {
   const location = useLocation();
@@ -23,6 +24,7 @@ const AppContent: React.FC = () => {
 
   return (
     <>
+      <ScrollToTop />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />

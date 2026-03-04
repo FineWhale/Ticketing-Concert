@@ -20,6 +20,8 @@ interface Order {
   customerPhone: string;
   createdAt: string;
   items: OrderItem[];
+  snapToken: string;
+  paymentUrl: string;
 }
 
 const STATUS_STYLE: Record<string, string> = {
@@ -67,44 +69,50 @@ const OrdersPage: React.FC = () => {
     });
   };
 
-  useEffect(() => {
-    const fetchOrders = async () => {
-      const token = localStorage.getItem("authToken");
-      if (!token) {
+  const fetchOrders = async () => {
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+    setLoading(true);
+    try {
+      const response = await fetch("http://localhost:5000/api/orders", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.status === 401) {
         navigate("/login");
         return;
       }
+      if (!response.ok) throw new Error("Gagal mengambil data orders");
+      const data = await response.json();
+      setOrders(data || []);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      try {
-        const response = await fetch("http://localhost:5000/api/orders", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (response.status === 401) {
-          navigate("/login");
-          return;
-        }
-
-        if (!response.ok) {
-          throw new Error("Gagal mengambil data orders");
-        }
-
-        const data = await response.json();
-        setOrders(data || []);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
+  useEffect(() => {
     fetchOrders();
   }, [navigate]);
 
   const toggleExpand = (orderCode: string) => {
     setExpandedOrder(expandedOrder === orderCode ? null : orderCode);
+  };
+
+  const handleContinuePayment = (snapToken: string) => {
+    if ((window as any).snap) {
+      (window as any).snap.pay(snapToken, {
+        onSuccess: () => fetchOrders(),
+        onPending: () => fetchOrders(),
+        onError: () => alert("Pembayaran gagal, silakan coba lagi."),
+        onClose: () => {},
+      });
+    } else {
+      alert("Midtrans Snap belum siap, coba refresh halaman.");
+    }
   };
 
   return (
@@ -123,7 +131,15 @@ const OrdersPage: React.FC = () => {
           ← Kembali ke Home
         </button>
 
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">My Orders</h1>
+        <div className="flex items-center justify-between mb-1">
+          <h1 className="text-2xl font-bold text-gray-900">My Orders</h1>
+          <button
+            onClick={() => fetchOrders()}
+            className="text-xs text-gray-400 hover:text-gray-700 transition-colors"
+          >
+            ⟲
+          </button>
+        </div>
         <p className="text-sm text-gray-400 mb-6">
           Riwayat pembelian tiket kamu
         </p>
@@ -149,7 +165,7 @@ const OrdersPage: React.FC = () => {
           <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center">
             <p className="text-red-500 font-medium mb-3">{error}</p>
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => fetchOrders()}
               className="px-4 py-2 bg-gray-900 text-white rounded-full text-sm font-semibold"
             >
               Coba Lagi
@@ -201,7 +217,7 @@ const OrdersPage: React.FC = () => {
                   </div>
 
                   {/* CONCERT INFO */}
-                  <div className="	bg-gray-100 text-black rounded-xl p-4 mb-3">
+                  <div className="bg-gray-100 text-black rounded-xl p-4 mb-3">
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-0.5">
@@ -243,6 +259,16 @@ const OrdersPage: React.FC = () => {
                       {formatPrice(order.totalAmount)}
                     </p>
                   </div>
+
+                  {/* LANJUTKAN PEMBAYARAN */}
+                  {order.status === "pending" && order.snapToken && (
+                    <button
+                      onClick={() => handleContinuePayment(order.snapToken)}
+                      className="mt-3 w-full py-2.5 bg-yellow text-gray-900 rounded-full text-sm font-bold hover:brightness-95 transition-all"
+                    >
+                      Lanjutkan Pembayaran
+                    </button>
+                  )}
                 </div>
 
                 {/* EXPAND BUTTON */}

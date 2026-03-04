@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 
 export interface SeatSection {
   id: string;
-  // img: string;
   label: string;
   price: number;
   available: number;
@@ -14,7 +13,6 @@ const CONTAINER_MAX_WIDTH = "640px";
 const SEAT_SECTIONS: SeatSection[] = [
   {
     id: "cat1_a",
-    // img: "/images/cat1_A.png",
     label: "CAT 1 A",
     price: 2500000,
     available: 42,
@@ -22,7 +20,6 @@ const SEAT_SECTIONS: SeatSection[] = [
   },
   {
     id: "cat1_b",
-    // img: "/images/cat1_B.png",
     label: "CAT 1 B",
     price: 2500000,
     available: 38,
@@ -30,7 +27,6 @@ const SEAT_SECTIONS: SeatSection[] = [
   },
   {
     id: "cat1_c",
-    // img: "/images/cat1_C.png",
     label: "CAT 1 C",
     price: 2500000,
     available: 55,
@@ -38,7 +34,6 @@ const SEAT_SECTIONS: SeatSection[] = [
   },
   {
     id: "cat1_d",
-    // img: "/images/cat1_D.png",
     label: "CAT 1 D",
     price: 2500000,
     available: 40,
@@ -46,7 +41,6 @@ const SEAT_SECTIONS: SeatSection[] = [
   },
   {
     id: "cat1_e",
-    // img: "/images/cat1_E.png",
     label: "CAT 1 E",
     price: 2500000,
     available: 45,
@@ -54,7 +48,6 @@ const SEAT_SECTIONS: SeatSection[] = [
   },
   {
     id: "cat1_f",
-    // img: "/images/cat1_F.png",
     label: "CAT 1 F",
     price: 2500000,
     available: 52,
@@ -62,7 +55,6 @@ const SEAT_SECTIONS: SeatSection[] = [
   },
   {
     id: "cat3_g",
-    // img: "/images/cat3_G.png",
     label: "CAT 3 G",
     price: 1200000,
     available: 80,
@@ -70,7 +62,6 @@ const SEAT_SECTIONS: SeatSection[] = [
   },
   {
     id: "cat3_h",
-    // img: "/images/cat3_H.png",
     label: "CAT 3 H",
     price: 1200000,
     available: 78,
@@ -78,7 +69,6 @@ const SEAT_SECTIONS: SeatSection[] = [
   },
   {
     id: "cat2_i",
-    // img: "/images/cat2_I.png",
     label: "CAT 2 I",
     price: 1500000,
     available: 120,
@@ -86,7 +76,6 @@ const SEAT_SECTIONS: SeatSection[] = [
   },
   {
     id: "cat2_j",
-    // img: "/images/cat2_J.png",
     label: "CAT 2 J",
     price: 1500000,
     available: 115,
@@ -94,7 +83,6 @@ const SEAT_SECTIONS: SeatSection[] = [
   },
   {
     id: "cat4_k",
-    // img: "/images/cat4_K.png",
     label: "CAT 4 K",
     price: 750000,
     available: 200,
@@ -102,7 +90,6 @@ const SEAT_SECTIONS: SeatSection[] = [
   },
   {
     id: "cat4_l",
-    // img: "/images/cat4_L.png",
     label: "CAT 4 L",
     price: 750000,
     available: 195,
@@ -172,78 +159,53 @@ export const SeatMap: React.FC = () => {
 
   return (
     <div
-      className="relative w-full mx-auto"
+      className="relative w-full mx-auto flex flex-col h-full"
       style={{ maxWidth: CONTAINER_MAX_WIDTH }}
     >
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex gap-4 items-center">
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 px-[14px] py-2 bg-white border border-[#e0e0e0] rounded-full text-sm text-[#1a1a1a] cursor-pointer"
-            aria-pressed="true"
-          >
-            <span className="w-2 h-2 rounded-full bg-green-600" /> General
-          </button>
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 px-[14px] py-2 bg-white border border-[#e0e0e0] rounded-full text-sm text-[#1a1a1a] cursor-pointer"
-            aria-pressed="true"
-          >
-            <span className="w-2 h-2 rounded-full bg-[#95cca3]" /> Regular
-          </button>
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 px-[14px] py-2 bg-white border border-[#e0e0e0] rounded-full text-sm text-[#1a1a1a] cursor-pointer"
-            aria-pressed="true"
-          >
-            <span className="w-2 h-2 rounded-full bg-[#c0c0c0]" /> Premium
-          </button>
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 px-[14px] py-2 bg-white border border-[#e0e0e0] rounded-full text-sm text-[#1a1a1a] cursor-pointer"
-            aria-pressed="true"
-          >
-            <span className="w-2 h-2 rounded-full bg-[#efff5e]" /> VIP
-          </button>
-        </div>
-        <div className="flex flex-col gap-1">
-          <button
-            type="button"
-            className="w-8 h-8 border border-[#e0e0e0] rounded-full bg-white text-base cursor-pointer flex items-center justify-center hover:bg-[#f0f0f0]"
-            aria-label="Refresh"
-          >
-            ↻
-          </button>
-          <button
-            type="button"
-            className="w-8 h-8 border border-[#e0e0e0] rounded-full bg-white text-base cursor-pointer flex items-center justify-center hover:bg-[#f0f0f0]"
-            aria-label="Zoom in"
-          >
-            +
-          </button>
-          <button
-            type="button"
-            className="w-8 h-8 border border-[#e0e0e0] rounded-full bg-white text-base cursor-pointer flex items-center justify-center hover:bg-[#f0f0f0]"
-            aria-label="Zoom out"
-          >
-            −
-          </button>
-        </div>
+      {/* LEGEND — tetap di atas */}
+      <div className="flex gap-4 items-center flex-wrap mb-4">
+        <button
+          type="button"
+          className="inline-flex items-center gap-2 px-[14px] py-2 bg-white border border-[#e0e0e0] rounded-full text-sm text-[#1a1a1a] cursor-pointer"
+        >
+          <span className="w-2 h-2 rounded-full bg-green-600" /> General
+        </button>
+        <button
+          type="button"
+          className="inline-flex items-center gap-2 px-[14px] py-2 bg-white border border-[#e0e0e0] rounded-full text-sm text-[#1a1a1a] cursor-pointer"
+        >
+          <span className="w-2 h-2 rounded-full bg-[#95cca3]" /> Regular
+        </button>
+        <button
+          type="button"
+          className="inline-flex items-center gap-2 px-[14px] py-2 bg-white border border-[#e0e0e0] rounded-full text-sm text-[#1a1a1a] cursor-pointer"
+        >
+          <span className="w-2 h-2 rounded-full bg-[#c0c0c0]" /> Premium
+        </button>
+        <button
+          type="button"
+          className="inline-flex items-center gap-2 px-[14px] py-2 bg-white border border-[#e0e0e0] rounded-full text-sm text-[#1a1a1a] cursor-pointer"
+        >
+          <span className="w-2 h-2 rounded-full bg-[#efff5e]" /> VIP
+        </button>
       </div>
 
-      <div
-        ref={containerRef}
-        className="seat-map-svg w-full overflow-hidden rounded-[2px] bg-white [&_[id^=seat-]]:cursor-pointer [&_[id^=seat-]]:transition-[filter] [&_[id^=seat-]:hover]:brightness-105"
-        style={{ aspectRatio: "884 / 477" }}
-        role="img"
-        aria-label="Peta kursi konser"
-      >
-        {svgContent && (
-          <div
-            className="w-full h-full [&_svg]:w-full [&_svg]:h-full [&_svg]:block"
-            dangerouslySetInnerHTML={{ __html: svgContent }}
-          />
-        )}
+      {/* SVG MAP — center di sisa ruang */}
+      <div className="flex-1 flex items-center">
+        <div
+          ref={containerRef}
+          className="seat-map-svg w-full overflow-hidden rounded-[2px] bg-white [&_[id^=seat-]]:cursor-pointer [&_[id^=seat-]]:transition-[filter] [&_[id^=seat-]:hover]:brightness-105"
+          style={{ aspectRatio: "884 / 477" }}
+          role="img"
+          aria-label="Peta kursi konser"
+        >
+          {svgContent && (
+            <div
+              className="w-full h-full [&_svg]:w-full [&_svg]:h-full [&_svg]:block"
+              dangerouslySetInnerHTML={{ __html: svgContent }}
+            />
+          )}
+        </div>
       </div>
 
       {hoverCard && (

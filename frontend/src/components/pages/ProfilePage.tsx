@@ -25,7 +25,7 @@ const ProfilePage: React.FC = () => {
       />
 
       <div className="max-w-lg mx-auto py-10 px-4">
-        {/* BACK */}
+        {/* back */}
         <button
           onClick={() => navigate("/")}
           className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-6 transition-colors"
@@ -33,7 +33,7 @@ const ProfilePage: React.FC = () => {
           ← Kembali ke Home
         </button>
 
-        {/* AVATAR + NAME */}
+        {/* ava */}
         <div className="bg-white rounded-2xl shadow-sm p-6 mb-4">
           <div className="flex items-center gap-4 mb-6">
             <div className="w-16 h-16 bg-gray-900 rounded-full flex items-center justify-center shrink-0">

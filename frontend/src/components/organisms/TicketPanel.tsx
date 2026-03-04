@@ -119,10 +119,10 @@ export const TicketPanel: React.FC = () => {
       minimumFractionDigits: 0,
     }).format(price);
 
-  // Helper to get quantity for specific item
+  // quantity helper
   const getQty = (id: string) => cart.find((i) => i.id === id)?.quantity || 0;
 
-  // Filter + Sort
+  // filter + Sort
   const filtered = MOCKLISTINGS.filter((t) => {
     if (priceFilter === "Under 1M") return t.priceEach < 1000000;
     if (priceFilter === "1M-2M")

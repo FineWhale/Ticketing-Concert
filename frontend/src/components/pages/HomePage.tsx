@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Header, Footer } from "../organisms";
+import { Header } from "../organisms";
 
 const TICKETS = [
   {
@@ -107,7 +107,11 @@ const HomePage: React.FC = () => {
   return (
     <div className="min-h-screen bg-white">
       <Header
-        onContactClick={() => console.log("Contact clicked")}
+        onContactClick={() => {
+          document
+            .getElementById("footer")
+            ?.scrollIntoView({ behavior: "smooth" });
+        }}
         onBookClick={() => navigate("/book-ticket")}
       />
 

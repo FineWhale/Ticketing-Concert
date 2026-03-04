@@ -11,7 +11,14 @@ const BookTicketPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#f5f5f5] pt-[72px]">
       <Header
-        onContactClick={() => console.log("Contact clicked")}
+        onContactClick={() => {
+          navigate("/");
+          setTimeout(() => {
+            document
+              .getElementById("footer")
+              ?.scrollIntoView({ behavior: "smooth" });
+          }, 100);
+        }}
         onBookClick={() => navigate("/book-ticket")}
       />
 
@@ -53,9 +60,9 @@ const BookTicketPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-[1fr_400px] gap-0 max-w-full bg-white">
         {/* SeatMap — sticky, never scrolls */}
         <div
-          className="p-4 md:p-6 border-r-0 md:border-r border-[#e0e0e0]
-                        sticky top-[72px] self-start
-                        h-[calc(100vh-72px)] overflow-hidden"
+          className="px-4 md:px-6 pt-12 md:pt-16 pb-4 md:pb-6 border-r-0 md:border-r border-[#e0e0e0]
+                      sticky top-[72px] self-start
+                      h-[calc(100vh-72px)] overflow-hidden"
         >
           <SeatMap />
         </div>
@@ -63,7 +70,7 @@ const BookTicketPage: React.FC = () => {
         {/* TicketPanel — scrollable */}
         <div
           className="p-4 md:p-6 flex flex-col
-                        h-[calc(100vh-72px)] overflow-y-auto sticky top-[72px] self-start"
+                      h-[calc(100vh-72px)] overflow-y-auto sticky top-[72px] self-start"
         >
           <TicketPanel />
         </div>
