@@ -45,7 +45,7 @@ export const useAuth = (): UseAuthReturn => {
     try {
       const response = await authService.login(
         credentials.email,
-        credentials.password
+        credentials.password,
       );
       setUser(response.user);
       setIsAuthenticated(true);

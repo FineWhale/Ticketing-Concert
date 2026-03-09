@@ -8,6 +8,7 @@ import {
 import { AuthProvider } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AdminRoute from "./components/AdminRoute";
 import HomePage from "./components/pages/HomePage";
 import LoginPage from "./components/pages/LoginPage";
 import RegisterPage from "./components/pages/RegisterPage";
@@ -15,12 +16,15 @@ import ProfilePage from "./components/pages/ProfilePage";
 import BookTicketPage from "./components/pages/BookTicketPage";
 import CheckoutPage from "./components/pages/CheckoutPage";
 import OrdersPage from "./components/pages/OrdersPage";
+import AdminPage from "./components/pages/AdminPage";
 import { Footer } from "./components/organisms";
 import ScrollToTop from "./components/ScrollToTop";
 
 const AppContent: React.FC = () => {
   const location = useLocation();
-  const hideFooter = ["/login", "/register"].includes(location.pathname);
+  const hideFooter = ["/login", "/register", "/admin"].includes(
+    location.pathname,
+  );
 
   return (
     <>
@@ -66,6 +70,14 @@ const AppContent: React.FC = () => {
             <ProtectedRoute>
               <OrdersPage />
             </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <AdminPage />
+            </AdminRoute>
           }
         />
       </Routes>
