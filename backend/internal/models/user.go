@@ -11,7 +11,8 @@ type User struct {
 	FirstName string         `gorm:"type:varchar(100);not null" json:"firstName"`
 	LastName  string         `gorm:"type:varchar(100);not null" json:"lastName"`
 	Email     string         `gorm:"type:varchar(255);unique;not null" json:"email"`
-	Password  string         `gorm:"type:varchar(255);not null" json:"-"` // Never return password in JSON
+	Password  string         `gorm:"type:varchar(255);not null" json:"-"`
+	Role      string         `gorm:"type:varchar(20);default:'user'" json:"role"`
 	CreatedAt time.Time      `json:"createdAt"`
 	UpdatedAt time.Time      `json:"updatedAt"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`

@@ -33,7 +33,12 @@ func main() {
 		log.Fatal("Failed to connect to database:", err)
 	}
 
-	if err := db.AutoMigrate(&models.User{}, &models.Order{}, &models.OrderItem{}); err != nil {
+	if err := db.AutoMigrate(
+		&models.User{},
+		&models.Order{},
+		&models.OrderItem{},
+		&models.TicketStock{},
+	); err != nil {
 		log.Fatal("Failed to migrate database:", err)
 	}
 
@@ -49,8 +54,9 @@ func main() {
 	authHandler := handlers.NewAuthHandler(authService)
 	orderHandler := handlers.NewOrderHandler(orderService)
 	paymentHandler := handlers.NewPaymentHandler(orderService)
+	adminHandler := handlers.NewAdminHandler(db)
 
-	e := setupRouter(cfg, authHandler, orderHandler, paymentHandler)
+	e := setupRouter(cfg, authHandler, orderHandler, paymentHandler, adminHandler)
 
 	log.Printf("API starting at port %s", cfg.Port)
 	log.Printf("Environment: %s", cfg.Environment)
@@ -74,7 +80,13 @@ func connectDB(cfg *config.Config) (*gorm.DB, error) {
 	return db, nil
 }
 
-func setupRouter(cfg *config.Config, authHandler *handlers.AuthHandler, orderHandler *handlers.OrderHandler, paymentHandler *handlers.PaymentHandler) *echo.Echo {
+func setupRouter(
+	cfg *config.Config,
+	authHandler *handlers.AuthHandler,
+	orderHandler *handlers.OrderHandler,
+	paymentHandler *handlers.PaymentHandler,
+	adminHandler *handlers.AdminHandler,
+) *echo.Echo {
 	e := echo.New()
 	e.HideBanner = true
 
@@ -106,6 +118,16 @@ func setupRouter(cfg *config.Config, authHandler *handlers.AuthHandler, orderHan
 	orders.GET("/:orderCode", orderHandler.GetOrder)
 
 	api.POST("/payment/notification", paymentHandler.HandleNotification)
+
+	// Admin routes
+	admin := api.Group("/admin")
+	admin.Use(middleware.AuthMiddleware(cfg.JWTSecret))
+	admin.Use(middleware.AdminOnly())
+	admin.GET("/stats", adminHandler.GetStats)
+	admin.GET("/sales-chart", adminHandler.GetSalesChart)
+	admin.GET("/orders", adminHandler.GetOrders)
+	admin.GET("/ticket-stocks", adminHandler.GetTicketStocks)
+	admin.POST("/ticket-stocks", adminHandler.UpsertTicketStock)
 
 	log.Println("Routes configured successfully")
 	return e

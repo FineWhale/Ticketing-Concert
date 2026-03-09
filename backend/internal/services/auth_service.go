@@ -23,9 +23,7 @@ func NewAuthService(userRepo *repository.UserRepository, jwtSecret string, jwtEx
 	}
 }
 
-// register new acc
 func (s *AuthService) Register(req *models.RegisterRequest) (*models.AuthResponse, error) {
-	// check email
 	exists, err := s.userRepo.EmailExists(req.Email)
 	if err != nil {
 		return nil, err
@@ -34,7 +32,6 @@ func (s *AuthService) Register(req *models.RegisterRequest) (*models.AuthRespons
 		return nil, errors.New("email already exists")
 	}
 
-	// hashing
 	hashedPassword, err := utils.HashPassword(req.Password)
 	if err != nil {
 		return nil, err
@@ -45,13 +42,14 @@ func (s *AuthService) Register(req *models.RegisterRequest) (*models.AuthRespons
 		LastName:  req.LastName,
 		Email:     req.Email,
 		Password:  hashedPassword,
+		Role:      "user",
 	}
 
 	if err := s.userRepo.Create(user); err != nil {
 		return nil, err
 	}
 
-	token, err := utils.GenerateJWT(user.ID, user.Email, s.jwtSecret, s.jwtExpiry)
+	token, err := utils.GenerateJWT(user.ID, user.Email, user.Role, s.jwtSecret, s.jwtExpiry)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +74,7 @@ func (s *AuthService) Login(req *models.LoginRequest) (*models.AuthResponse, err
 		return nil, errors.New("invalid email or password")
 	}
 
-	token, err := utils.GenerateJWT(user.ID, user.Email, s.jwtSecret, s.jwtExpiry)
+	token, err := utils.GenerateJWT(user.ID, user.Email, user.Role, s.jwtSecret, s.jwtExpiry)
 	if err != nil {
 		return nil, err
 	}

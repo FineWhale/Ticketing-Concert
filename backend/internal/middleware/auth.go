@@ -33,9 +33,9 @@ func AuthMiddleware(jwtSecret string) echo.MiddlewareFunc {
 				})
 			}
 
-			// set ke context       diambil di handler dengan c.Get("userID").(string)
 			c.Set("userID", claims.UserID)
 			c.Set("email", claims.Email)
+			c.Set("role", claims.Role)
 
 			return next(c)
 		}

@@ -1,0 +1,126 @@
+package handlers
+
+import (
+	"net/http"
+	"strconv"
+	"time"
+
+	"beachboys-concert-backend/internal/models"
+
+	"github.com/labstack/echo/v4"
+	"gorm.io/gorm"
+)
+
+type AdminHandler struct {
+	db *gorm.DB
+}
+
+func NewAdminHandler(db *gorm.DB) *AdminHandler {
+	return &AdminHandler{db: db}
+}
+
+func (h *AdminHandler) GetStats(c echo.Context) error {
+	var stats models.AdminStats
+
+	h.db.Model(&models.Order{}).Count(&stats.TotalOrders)
+	h.db.Model(&models.Order{}).Where("status = ?", "paid").Count(&stats.PaidOrders)
+	h.db.Model(&models.Order{}).Where("status = ?", "pending").Count(&stats.PendingOrders)
+
+	h.db.Model(&models.Order{}).
+		Where("status = ?", "paid").
+		Select("COALESCE(SUM(total_amount), 0)").
+		Scan(&stats.TotalRevenue)
+
+	h.db.Model(&models.OrderItem{}).
+		Joins("JOIN orders ON orders.id = order_items.order_id").
+		Where("orders.status = ?", "paid").
+		Select("COALESCE(SUM(order_items.quantity), 0)").
+		Scan(&stats.TotalTicketsSold)
+
+	return c.JSON(http.StatusOK, map[string]interface{}{"data": stats})
+}
+
+func (h *AdminHandler) GetSalesChart(c echo.Context) error {
+	days := 30
+	if d, err := strconv.Atoi(c.QueryParam("days")); err == nil && d > 0 {
+		days = d
+	}
+
+	since := time.Now().AddDate(0, 0, -days)
+	var data []models.SalesChartPoint
+
+	h.db.Model(&models.Order{}).
+		Where("status = ? AND created_at >= ?", "paid", since).
+		Select("TO_CHAR(created_at, 'YYYY-MM-DD') as date, SUM(total_amount) as revenue, COUNT(*) as orders").
+		Group("TO_CHAR(created_at, 'YYYY-MM-DD')").
+		Order("date ASC").
+		Scan(&data)
+
+	return c.JSON(http.StatusOK, map[string]interface{}{"data": data})
+}
+
+func (h *AdminHandler) GetOrders(c echo.Context) error {
+	page, _ := strconv.Atoi(c.QueryParam("page"))
+	if page < 1 {
+		page = 1
+	}
+	limit, _ := strconv.Atoi(c.QueryParam("limit"))
+	if limit < 1 {
+		limit = 20
+	}
+	status := c.QueryParam("status")
+
+	var orders []models.Order
+	var total int64
+
+	query := h.db.Model(&models.Order{}).Preload("Items")
+	if status != "" {
+		query = query.Where("status = ?", status)
+	}
+
+	query.Count(&total)
+	query.Offset((page - 1) * limit).Limit(limit).Order("created_at DESC").Find(&orders)
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"orders": orders,
+		"total":  total,
+		"page":   page,
+		"limit":  limit,
+	})
+}
+
+func (h *AdminHandler) GetTicketStocks(c echo.Context) error {
+	var stocks []models.TicketStock
+	h.db.Order("section, type").Find(&stocks)
+	return c.JSON(http.StatusOK, map[string]interface{}{"data": stocks})
+}
+
+func (h *AdminHandler) UpsertTicketStock(c echo.Context) error {
+	var req models.UpsertStockRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+	}
+	if req.Section == "" || req.Type == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "section and type are required"})
+	}
+
+	var stock models.TicketStock
+	err := h.db.Where("section = ? AND type = ?", req.Section, req.Type).First(&stock).Error
+
+	if err != nil {
+		stock = models.TicketStock{
+			Section: req.Section,
+			Type:    req.Type,
+			Stock:   req.Stock,
+			Price:   req.Price,
+		}
+		h.db.Create(&stock)
+	} else {
+		h.db.Model(&stock).Updates(map[string]interface{}{
+			"stock": req.Stock,
+			"price": req.Price,
+		})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{"data": stock})
+}
