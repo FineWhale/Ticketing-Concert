@@ -41,7 +41,13 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <div className="fixed top-0 left-0 right-0 h-[72px] bg-primary px-12 flex items-center justify-between z-[100]">
-      <img src="/images/logo.png" alt="Logo" className="h-10 object-contain" />
+      <img
+        src="/images/logo.png"
+        alt="Logo"
+        className="h-10 object-contain cursor-pointer"
+        onClick={() => navigate("/")}
+      />
+
       <div className="flex items-center gap-8 text-sm font-medium text-white">
         <span className="cursor-pointer" onClick={onContactClick}>
           Contact
