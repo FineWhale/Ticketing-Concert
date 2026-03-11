@@ -53,7 +53,7 @@ func main() {
 	authService := services.NewAuthService(userRepo, cfg.JWTSecret, jwtExpiry)
 	midtransService := services.NewMidtransService(cfg.MidtransServerKey)
 	seatService := services.NewSeatService(seatRepo)
-	orderService := services.NewOrderService(orderRepo, midtransService, seatService)
+	orderService := services.NewOrderService(orderRepo, midtransService, seatService, db)
 
 	// Seed seats on startup (hanya jika belum ada)
 	if err := seatService.SeedIfEmpty(); err != nil {

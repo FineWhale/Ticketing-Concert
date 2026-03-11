@@ -89,10 +89,10 @@ func (s *SeatService) SeedIfEmpty() error {
 		rows        int
 		seatsPerRow int
 	}{
-		{"CAT2", "i", 12, 25},
-		{"CAT2", "j", 12, 25},
-		{"CAT4", "k", 6, 18},
-		{"CAT4", "l", 6, 18},
+		{"CAT2", "i", 8, 14}, // jangan diubah
+		{"CAT2", "j", 8, 14}, // jangan diubah
+		{"CAT4", "k", 5, 12},
+		{"CAT4", "l", 5, 12},
 	}
 
 	for _, cfg := range configs {

@@ -16,19 +16,12 @@ interface Props {
 
 const CONFIGS: Record<
   string,
-  {
-    ir: number;
-    rs: number;
-    s: number;
-    e: number;
-    cx: number;
-    cy: number;
-  }
+  { ir: number; rs: number; s: number; e: number; cx: number; cy: number }
 > = {
-  i: { ir: 340, rs: 22, s: 112, e: 168, cx: 600, cy: -120 },
-  j: { ir: 340, rs: 22, s: 12, e: 68, cx: -20, cy: -120 },
-  k: { ir: 420, rs: 26, s: 112, e: 168, cx: 740, cy: -160 },
-  l: { ir: 420, rs: 26, s: 12, e: 68, cx: -20, cy: -160 },
+  i: { ir: 300, rs: 20, s: 110, e: 170, cx: 560, cy: -100 },
+  j: { ir: 300, rs: 20, s: 10, e: 70, cx: -20, cy: -100 },
+  k: { ir: 240, rs: 22, s: 108, e: 172, cx: 480, cy: -80 },
+  l: { ir: 240, rs: 22, s: 8, e: 72, cx: -20, cy: -80 },
 };
 
 const SECTION_COLOR: Record<string, string> = {
@@ -38,6 +31,7 @@ const SECTION_COLOR: Record<string, string> = {
 
 const MIN_SCALE = 0.15;
 const MAX_SCALE = 4;
+const SEAT_R = 7;
 
 function getSeatPos(
   rowIdx: number,
@@ -55,29 +49,7 @@ function getSeatPos(
   const end = (endDeg * Math.PI) / 180;
   const t = total <= 1 ? 0.5 : seatIdx / (total - 1);
   const angle = start + t * (end - start);
-  return { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
-}
-
-function buildArcPath(
-  numRows: number,
-  ir: number,
-  rs: number,
-  s: number,
-  e: number,
-  cx: number,
-  cy: number,
-): string {
-  const outerR = ir + (numRows - 1) * rs + 14;
-  const innerR = ir - 14;
-  const sr = (s * Math.PI) / 180;
-  const er = (e * Math.PI) / 180;
-  return [
-    `M ${cx + outerR * Math.cos(sr)} ${cy + outerR * Math.sin(sr)}`,
-    `A ${outerR} ${outerR} 0 0 1 ${cx + outerR * Math.cos(er)} ${cy + outerR * Math.sin(er)}`,
-    `L ${cx + innerR * Math.cos(er)} ${cy + innerR * Math.sin(er)}`,
-    `A ${innerR} ${innerR} 0 0 0 ${cx + innerR * Math.cos(sr)} ${cy + innerR * Math.sin(sr)}`,
-    "Z",
-  ].join(" ");
+  return { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle), r, angle };
 }
 
 function computeGeometry(seats: Seat[], cfg: (typeof CONFIGS)[string]) {
@@ -89,7 +61,9 @@ function computeGeometry(seats: Seat[], cfg: (typeof CONFIGS)[string]) {
     a.localeCompare(b),
   );
 
-  const allPts: { x: number; y: number }[] = [];
+  // Kumpulkan semua posisi kursi beserta r dan angle-nya
+  type PtInfo = { x: number; y: number; r: number; angle: number };
+  const allPts: PtInfo[] = [];
   sortedRows.forEach(([, rowSeats], ri) => {
     const sorted = [...rowSeats].sort((a, b) => a.number - b.number);
     sorted.forEach((_, si) =>
@@ -109,7 +83,8 @@ function computeGeometry(seats: Seat[], cfg: (typeof CONFIGS)[string]) {
     );
   });
 
-  const pad = 32;
+  // Hitung bounding box dari posisi kursi (sudah include radius)
+  const pad = SEAT_R + 8;
   const xs = allPts.map((p) => p.x);
   const ys = allPts.map((p) => p.y);
   const minX = Math.min(...xs) - pad;
@@ -117,21 +92,58 @@ function computeGeometry(seats: Seat[], cfg: (typeof CONFIGS)[string]) {
   const maxX = Math.max(...xs) + pad;
   const maxY = Math.max(...ys) + pad;
 
+  // Arc: hitung dari radius baris pertama dan terakhir + padding kursi
+  const firstRowR = cfg.ir;
+  const lastRowR = cfg.ir + (sortedRows.length - 1) * cfg.rs;
+  const innerR = firstRowR - (SEAT_R + 6);
+  const outerR = lastRowR + (SEAT_R + 6);
+
+  // Sudut: hitung dari kursi paling kiri dan kanan baris tengah
+  const midRowIdx = Math.floor(sortedRows.length / 2);
+  const [, midRowSeats] = sortedRows[midRowIdx];
+  const midSorted = [...midRowSeats].sort((a, b) => a.number - b.number);
+  const firstPt = getSeatPos(
+    midRowIdx,
+    0,
+    midSorted.length,
+    cfg.ir,
+    cfg.rs,
+    cfg.s,
+    cfg.e,
+    cfg.cx,
+    cfg.cy,
+  );
+  const lastPt = getSeatPos(
+    midRowIdx,
+    midSorted.length - 1,
+    midSorted.length,
+    cfg.ir,
+    cfg.rs,
+    cfg.s,
+    cfg.e,
+    cfg.cx,
+    cfg.cy,
+  );
+
+  const angularPad = Math.asin((SEAT_R + 4) / firstPt.r);
+  const startAngle = firstPt.angle - angularPad;
+  const endAngle = lastPt.angle + angularPad;
+
+  const arcPath = [
+    `M ${cfg.cx + outerR * Math.cos(startAngle)} ${cfg.cy + outerR * Math.sin(startAngle)}`,
+    `A ${outerR} ${outerR} 0 0 1 ${cfg.cx + outerR * Math.cos(endAngle)} ${cfg.cy + outerR * Math.sin(endAngle)}`,
+    `L ${cfg.cx + innerR * Math.cos(endAngle)} ${cfg.cy + innerR * Math.sin(endAngle)}`,
+    `A ${innerR} ${innerR} 0 0 0 ${cfg.cx + innerR * Math.cos(startAngle)} ${cfg.cy + innerR * Math.sin(startAngle)}`,
+    "Z",
+  ].join(" ");
+
   return {
     sortedRows,
     originX: (minX + maxX) / 2,
     originY: (minY + maxY) / 2,
     bboxW: maxX - minX,
     bboxH: maxY - minY,
-    arcPath: buildArcPath(
-      sortedRows.length,
-      cfg.ir,
-      cfg.rs,
-      cfg.s,
-      cfg.e,
-      cfg.cx,
-      cfg.cy,
-    ),
+    arcPath,
   };
 }
 
@@ -164,7 +176,6 @@ export const CurvedSeatGrid: React.FC<Props> = ({
     return computeGeometry(seats, cfg);
   }, [seats, cfg]);
 
-  // ── ResizeObserver — set scale akurat saat mount ────────────
   useEffect(() => {
     const el = containerRef.current;
     if (!el || !geo) return;
@@ -264,20 +275,17 @@ export const CurvedSeatGrid: React.FC<Props> = ({
 
   const pivotX = containerSize.w / 2 + offset.x;
   const pivotY = containerSize.h / 2 + offset.y;
+  const transform = `translate(${pivotX},${pivotY}) scale(${scale}) translate(${-geo.originX},${-geo.originY})`;
 
   return (
     <div className="flex flex-col items-center gap-2 w-full">
-      {/* Stage — di luar canvas */}
       <div className="bg-[#1a1a1a] text-white text-[10px] font-bold px-8 py-1.5 rounded-full tracking-widest">
         STAGE
       </div>
-
-      {/* Hint — di luar canvas */}
       <p className="text-[10px] text-[#bbb]">
         Scroll/pinch untuk zoom · drag untuk geser
       </p>
 
-      {/* Canvas */}
       <div
         ref={containerRef}
         className="relative w-full rounded-xl bg-[#fafafa] border border-gray-100"
@@ -296,9 +304,7 @@ export const CurvedSeatGrid: React.FC<Props> = ({
         onTouchEnd={onTouchEnd}
       >
         <svg width="100%" height="100%">
-          <g
-            transform={`translate(${pivotX},${pivotY}) scale(${scale}) translate(${-geo.originX},${-geo.originY})`}
-          >
+          <g transform={transform}>
             <path d={geo.arcPath} fill={accentColor} opacity={0.1} />
             <path
               d={geo.arcPath}
@@ -329,7 +335,7 @@ export const CurvedSeatGrid: React.FC<Props> = ({
                     key={seat.id}
                     cx={x}
                     cy={y}
-                    r={7}
+                    r={SEAT_R}
                     fill={isSel ? "#fee505" : isAvail ? "#fff" : "#e5e7eb"}
                     stroke={
                       isSel ? "#d4c004" : isAvail ? accentColor : "#d1d5db"
@@ -353,7 +359,6 @@ export const CurvedSeatGrid: React.FC<Props> = ({
           </g>
         </svg>
 
-        {/* Zoom controls — absolute dalam canvas, tidak nutup konten luar */}
         <div
           className="absolute bottom-3 left-3 flex flex-col gap-1 z-10"
           onPointerDown={(e) => e.stopPropagation()}
