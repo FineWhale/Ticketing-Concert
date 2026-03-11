@@ -19,6 +19,13 @@ func NewAdminHandler(db *gorm.DB) *AdminHandler {
 	return &AdminHandler{db: db}
 }
 
+var sectionBlockMap = map[string]string{
+	"CAT 2 I": "i",
+	"CAT 2 J": "j",
+	"CAT 4 K": "k",
+	"CAT 4 L": "l",
+}
+
 func (h *AdminHandler) GetStats(c echo.Context) error {
 	var stats models.AdminStats
 
@@ -89,9 +96,25 @@ func (h *AdminHandler) GetOrders(c echo.Context) error {
 	})
 }
 
+// GetTicketStocks — stok seat-based dihitung live dari tabel seats,
+// stok non-seat (standing) tetap dari ticket_stocks.
 func (h *AdminHandler) GetTicketStocks(c echo.Context) error {
 	var stocks []models.TicketStock
 	h.db.Order("section, type").Find(&stocks)
+
+	for i, s := range stocks {
+		block, ok := sectionBlockMap[s.Section]
+		if !ok {
+			// Non-seat section (standing), pakai stock dari DB apa adanya
+			continue
+		}
+		var count int64
+		h.db.Model(&models.Seat{}).
+			Where("block = ? AND status = 'available'", block).
+			Count(&count)
+		stocks[i].Stock = int(count)
+	}
+
 	return c.JSON(http.StatusOK, map[string]interface{}{"data": stocks})
 }
 
@@ -127,7 +150,6 @@ func (h *AdminHandler) UpsertTicketStock(c echo.Context) error {
 }
 
 // UpdateTicketStockByID — PATCH /admin/ticket-stocks/:id
-// Dipakai oleh inline-edit table di frontend
 func (h *AdminHandler) UpdateTicketStockByID(c echo.Context) error {
 	id := c.Param("id")
 	if id == "" {
