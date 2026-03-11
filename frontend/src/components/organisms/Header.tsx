@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthContext } from "../../context/AuthContext";
-import { useCart } from "../../context";
+import { useCartContext } from "../../context/CartContext";
 
 interface HeaderProps {
   onContactClick?: () => void;
@@ -14,11 +14,10 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuthContext();
-  const { cart, totalItems, totalPrice, removeFromCart } = useCart();
+  const { cart, totalItems, totalPrice, removeItem } = useCartContext(); // ← fix
   const [cartOpen, setCartOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -62,7 +61,7 @@ export const Header: React.FC<HeaderProps> = ({
           </span>
         )}
 
-        {/* Cart Dropdown - hanya muncul kalau authenticated */}
+        {/* Cart Dropdown */}
         {isAuthenticated && (
           <div className="relative" ref={dropdownRef}>
             <button
@@ -134,6 +133,19 @@ export const Header: React.FC<HeaderProps> = ({
                             <p className="text-xs text-gray-400 mt-1">
                               {item.quantity} × {formatPrice(item.priceEach)}
                             </p>
+                            {/* Seat labels kalau ada */}
+                            {item.seatLabels && item.seatLabels.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {item.seatLabels.map((label) => (
+                                  <span
+                                    key={label}
+                                    className="text-[9px] px-1.5 py-0.5 bg-[#fee505] text-[#1a1a1a] rounded font-bold"
+                                  >
+                                    {label}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                           </div>
                           <div className="flex items-start gap-2 ml-2">
                             <p className="text-xs font-bold text-gray-900 whitespace-nowrap">
@@ -142,7 +154,7 @@ export const Header: React.FC<HeaderProps> = ({
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                removeFromCart(item.id);
+                                removeItem(item.id); // ← fix
                               }}
                               className="text-red-500 hover:text-red-700 text-sm transition-colors"
                               title="Remove"

@@ -1,6 +1,12 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useCart } from "../../context";
+import { useCartContext } from "../../context/CartContext";
+
+type BlockID = "i" | "j" | "k" | "l";
+
+interface TicketPanelProps {
+  onOpenSeatPicker?: (block: BlockID) => void;
+}
 
 interface TicketListing {
   id: string;
@@ -8,6 +14,7 @@ interface TicketListing {
   type: string;
   priceEach: number;
   available: number;
+  block?: BlockID;
 }
 
 const MOCKLISTINGS: TicketListing[] = [
@@ -59,6 +66,7 @@ const MOCKLISTINGS: TicketListing[] = [
     type: "Premium",
     priceEach: 1500000,
     available: 120,
+    block: "i",
   },
   {
     id: "cat2j",
@@ -66,6 +74,7 @@ const MOCKLISTINGS: TicketListing[] = [
     type: "Premium",
     priceEach: 1500000,
     available: 115,
+    block: "j",
   },
   {
     id: "cat3g",
@@ -87,6 +96,7 @@ const MOCKLISTINGS: TicketListing[] = [
     type: "General",
     priceEach: 750000,
     available: 200,
+    block: "k",
   },
   {
     id: "cat4l",
@@ -94,6 +104,7 @@ const MOCKLISTINGS: TicketListing[] = [
     type: "General",
     priceEach: 750000,
     available: 195,
+    block: "l",
   },
 ];
 
@@ -104,9 +115,12 @@ const TYPE_BADGE: Record<string, string> = {
   General: "bg-gray-100 text-gray-600",
 };
 
-export const TicketPanel: React.FC = () => {
+export const TicketPanel: React.FC<TicketPanelProps> = ({
+  onOpenSeatPicker,
+}) => {
   const navigate = useNavigate();
-  const { cart, addToCart, removeFromCart, totalItems, totalPrice } = useCart();
+  const { cart, addItem, removeItem, totalItems, totalPrice } =
+    useCartContext();
 
   const [sortTab, setSortTab] = useState<"lowest" | "best">("lowest");
   const [priceFilter, setPriceFilter] = useState("All");
@@ -119,10 +133,10 @@ export const TicketPanel: React.FC = () => {
       minimumFractionDigits: 0,
     }).format(price);
 
-  // quantity helper
-  const getQty = (id: string) => cart.find((i) => i.id === id)?.quantity || 0;
+  const getQty = (id: string) => cart.find((i) => i.id === id)?.quantity ?? 0;
+  const getCartItem = (id: string) => cart.find((i) => i.id === id);
+  const cartItemById = (item: TicketListing) => getCartItem(item.id);
 
-  // filter + Sort
   const filtered = MOCKLISTINGS.filter((t) => {
     if (priceFilter === "Under 1M") return t.priceEach < 1000000;
     if (priceFilter === "1M-2M")
@@ -136,6 +150,22 @@ export const TicketPanel: React.FC = () => {
         ? a.priceEach - b.priceEach
         : b.available - a.available,
     );
+
+  const handleAdd = (item: TicketListing) => {
+    addItem({
+      id: item.id,
+      section: item.section,
+      type: item.type,
+      priceEach: item.priceEach,
+      quantity: 1,
+      seatIds: [],
+      seatLabels: [],
+    });
+  };
+
+  const handleRemove = (item: TicketListing) => {
+    removeItem(item.id);
+  };
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -151,7 +181,6 @@ export const TicketPanel: React.FC = () => {
           <option value="1M-2M">Rp 1jt - 2jt</option>
           <option value="Over 2M">Over Rp 2.000.000</option>
         </select>
-
         <select
           className="px-3 py-2 border border-gray-200 rounded-lg bg-white text-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500"
           value={typeFilter}
@@ -191,6 +220,10 @@ export const TicketPanel: React.FC = () => {
         ) : (
           filtered.map((item) => {
             const qty = getQty(item.id);
+            const inCart = cartItemById(item);
+            const isSeatable = !!item.block;
+            const hasSeats = (inCart?.seatLabels?.length ?? 0) > 0;
+
             return (
               <div
                 key={item.id}
@@ -200,18 +233,29 @@ export const TicketPanel: React.FC = () => {
                     : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm"
                 }`}
               >
+                {/* Top row: section name + price */}
                 <div className="flex items-start justify-between mb-2">
                   <div>
                     <p className="text-sm font-bold text-gray-900">
                       Section {item.section}
                     </p>
-                    <span
-                      className={`text-xs font-semibold px-2 py-0.5 rounded-full mt-1 inline-block ${TYPE_BADGE[item.type]}`}
-                    >
-                      {item.type}
-                    </span>
+                    <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                      <span
+                        className={`text-xs font-semibold px-2 py-0.5 rounded-full ${TYPE_BADGE[item.type]}`}
+                      >
+                        {item.type}
+                      </span>
+                      {isSeatable && (
+                        <button
+                          onClick={() => onOpenSeatPicker?.(item.block!)}
+                          className="text-xs text-blue-500 font-medium hover:underline"
+                        >
+                          🪑 Pilih Kursi
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right shrink-0 ml-2">
                     <p className="text-base font-bold text-gray-900">
                       {formatPrice(item.priceEach)}
                     </p>
@@ -219,46 +263,63 @@ export const TicketPanel: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Seat labels jika ada */}
+                {hasSeats && (
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {inCart!.seatLabels.map((label) => (
+                      <span
+                        key={label}
+                        className="text-[10px] px-1.5 py-0.5 bg-yellow-300 text-gray-900 rounded font-bold"
+                      >
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Bottom row: available + stepper */}
                 <div className="flex items-center justify-between mt-3">
                   <p className="text-xs text-gray-400">
                     {item.available} kursi tersedia
                   </p>
 
+                  {/* Stepper — sama untuk seatable maupun tidak */}
                   {qty === 0 ? (
                     <button
-                      onClick={() =>
-                        addToCart({
-                          id: item.id,
-                          section: item.section,
-                          type: item.type,
-                          priceEach: item.priceEach,
-                        })
-                      }
+                      onClick={() => {
+                        // Untuk seatable, buka picker dulu jika belum ada kursi
+                        if (isSeatable && !hasSeats) {
+                          onOpenSeatPicker?.(item.block!);
+                        } else {
+                          handleAdd(item);
+                        }
+                      }}
                       className="px-4 py-1.5 bg-gray-900 text-white text-xs font-semibold rounded-full hover:bg-gray-700 transition-colors"
                     >
-                      + Tambah
+                      {isSeatable ? "🪑 Pilih Kursi" : "+ Tambah"}
                     </button>
                   ) : (
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => removeFromCart(item.id)}
-                        className="w-7 h-7 rounded-full bg-gray-200 text-gray-700 font-bold hover:bg-gray-300 transition-colors flex items-center justify-center"
+                        onClick={() => handleRemove(item)}
+                        className="w-7 h-7 rounded-full bg-gray-200 text-gray-700 font-bold hover:bg-gray-300 transition-colors flex items-center justify-center text-base leading-none"
                       >
                         −
                       </button>
-                      <span className="text-sm font-bold text-gray-900 w-4 text-center">
+                      <span className="text-sm font-bold text-gray-900 w-5 text-center">
                         {qty}
                       </span>
                       <button
-                        onClick={() =>
-                          addToCart({
-                            id: item.id,
-                            section: item.section,
-                            type: item.type,
-                            priceEach: item.priceEach,
-                          })
-                        }
-                        className="w-7 h-7 rounded-full bg-gray-900 text-white font-bold hover:bg-gray-700 transition-colors flex items-center justify-center"
+                        onClick={() => {
+                          // Untuk seatable, buka picker untuk tambah kursi
+                          if (isSeatable) {
+                            onOpenSeatPicker?.(item.block!);
+                          } else {
+                            handleAdd(item);
+                          }
+                        }}
+                        disabled={qty >= item.available}
+                        className="w-7 h-7 rounded-full bg-gray-900 text-white font-bold hover:bg-gray-700 disabled:opacity-30 transition-colors flex items-center justify-center text-base leading-none"
                       >
                         +
                       </button>
@@ -271,9 +332,9 @@ export const TicketPanel: React.FC = () => {
         )}
       </div>
 
-      {/* CART SUMMARY + CHECKOUT */}
+      {/* CART SUMMARY */}
       {totalItems > 0 && (
-        <div className="border-t border-gray-200 pt-3">
+        <div className="border-t border-gray-200 pt-3 shrink-0">
           <div className="flex justify-between items-center mb-3">
             <span className="text-sm text-gray-600">
               {totalItems} tiket dipilih

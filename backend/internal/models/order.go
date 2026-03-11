@@ -38,6 +38,7 @@ type CreateOrderRequest struct {
 	CustomerName  string             `json:"customerName" binding:"required"`
 	CustomerEmail string             `json:"customerEmail" binding:"required,email"`
 	CustomerPhone string             `json:"customerPhone" binding:"required"`
+	SeatIDs       []string           `json:"seatIds"` // ← optional, hanya untuk CAT2 & CAT4
 }
 
 type OrderItemRequest struct {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "../organisms";
-import { useCart } from "../../context";
+import { useCartContext } from "../../context/CartContext";
 
 type CheckoutStep = "summary" | "form" | "success";
 
@@ -16,11 +16,11 @@ const STEPS: CheckoutStep[] = ["summary", "form", "success"];
 
 const CheckoutPage: React.FC = () => {
   const navigate = useNavigate();
-  const { cart, totalPrice, totalItems, clearCart } = useCart();
+  const { cart, totalPrice, totalItems, clearCart } = useCartContext();
 
   const [step, setStep] = useState<CheckoutStep>("summary");
   const [form, setForm] = useState({ name: "", email: "", phone: "" });
-  const [orderId, setOrderId] = useState(`BBK-${Date.now()}`);
+  const [orderId, setOrderId] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -42,6 +42,10 @@ const CheckoutPage: React.FC = () => {
 
     try {
       const token = localStorage.getItem("authToken");
+
+      // Kumpulkan semua seatIds dari cart (hanya CAT2 & CAT4)
+      const allSeatIds = cart.flatMap((item) => item.seatIds ?? []);
+
       const response = await fetch("http://localhost:5000/api/orders", {
         method: "POST",
         headers: {
@@ -52,6 +56,7 @@ const CheckoutPage: React.FC = () => {
           customerName: form.name,
           customerEmail: form.email,
           customerPhone: form.phone,
+          seatIds: allSeatIds,
           items: cart.map((item) => ({
             section: item.section,
             type: item.type,
@@ -63,13 +68,18 @@ const CheckoutPage: React.FC = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to create order");
+        throw new Error(
+          errorData.error || errorData.message || "Failed to create order",
+        );
       }
 
       const data = await response.json();
       setOrderId(data.orderCode);
 
-      // ← BARU: buka Midtrans Snap popup
+      if (!(window as any).snap) {
+        throw new Error("Midtrans Snap belum siap, coba refresh halaman.");
+      }
+
       (window as any).snap.pay(data.snapToken, {
         onSuccess: () => {
           clearCart();
@@ -87,7 +97,6 @@ const CheckoutPage: React.FC = () => {
         },
       });
     } catch (error: any) {
-      console.error("Error creating order:", error);
       alert(`Gagal membuat order: ${error.message}`);
     } finally {
       setLoading(false);
@@ -121,7 +130,9 @@ const CheckoutPage: React.FC = () => {
           {STEPS.map((s, i) => (
             <React.Fragment key={s}>
               <div
-                className={`flex items-center gap-1.5 ${step === s ? "text-gray-900" : "text-gray-400"}`}
+                className={`flex items-center gap-1.5 ${
+                  step === s ? "text-gray-900" : "text-gray-400"
+                }`}
               >
                 <div
                   className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all ${
@@ -140,14 +151,16 @@ const CheckoutPage: React.FC = () => {
               </div>
               {i < STEPS.length - 1 && (
                 <div
-                  className={`flex-1 h-0.5 ${stepIndex > i ? "bg-green-500" : "bg-gray-200"}`}
+                  className={`flex-1 h-0.5 ${
+                    stepIndex > i ? "bg-green-500" : "bg-gray-200"
+                  }`}
                 />
               )}
             </React.Fragment>
           ))}
         </div>
 
-        {/* SUMMARY */}
+        {/* ── SUMMARY ── */}
         {step === "summary" && (
           <div className="bg-white rounded-2xl shadow-sm p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-1">
@@ -161,26 +174,43 @@ const CheckoutPage: React.FC = () => {
               {cart.map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0"
+                  className="py-3 border-b border-gray-100 last:border-0"
                 >
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">
-                      Section {item.section}
-                    </p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span
-                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${TYPE_BADGE[item.type]}`}
-                      >
-                        {item.type}
-                      </span>
-                      <span className="text-xs text-gray-400">
-                        {item.quantity} tiket
-                      </span>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">
+                        Section {item.section}
+                      </p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span
+                          className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                            TYPE_BADGE[item.type] ?? "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          {item.type}
+                        </span>
+                        <span className="text-xs text-gray-400">
+                          {item.quantity} tiket
+                        </span>
+                      </div>
+                      {/* Tampilkan seat labels kalau seated */}
+                      {item.seatLabels && item.seatLabels.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          {item.seatLabels.map((label) => (
+                            <span
+                              key={label}
+                              className="text-[10px] px-1.5 py-0.5 bg-[#fee505] text-[#1a1a1a] rounded font-bold"
+                            >
+                              {label}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
+                    <p className="text-sm font-bold text-gray-900">
+                      {formatPrice(item.priceEach * item.quantity)}
+                    </p>
                   </div>
-                  <p className="text-sm font-bold text-gray-900">
-                    {formatPrice(item.priceEach * item.quantity)}
-                  </p>
                 </div>
               ))}
             </div>
@@ -209,7 +239,7 @@ const CheckoutPage: React.FC = () => {
           </div>
         )}
 
-        {/* FORM */}
+        {/* ── FORM ── */}
         {step === "form" && (
           <div className="bg-white rounded-2xl shadow-sm p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-1">
@@ -277,7 +307,7 @@ const CheckoutPage: React.FC = () => {
           </div>
         )}
 
-        {/* SUCCESS */}
+        {/* ── SUCCESS ── */}
         {step === "success" && (
           <div className="bg-white rounded-2xl shadow-sm p-6 text-center">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -302,7 +332,7 @@ const CheckoutPage: React.FC = () => {
                 </div>
                 <span className="text-2xl">🎵</span>
               </div>
-              <div className="border-t border-gray-700 pt-4 grid grid-cols-2 gap-3 text-left">
+              <div className="border-t border-gray-700 pt-4 grid grid-cols-2 gap-3">
                 {[
                   { label: "TANGGAL", value: "17 Aug 2026" },
                   { label: "WAKTU", value: "19:00 WIB" },

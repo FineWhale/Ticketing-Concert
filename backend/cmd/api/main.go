@@ -33,30 +33,42 @@ func main() {
 		log.Fatal("Failed to connect to database:", err)
 	}
 
+	// ✅ Tambah models.Seat ke AutoMigrate
 	if err := db.AutoMigrate(
 		&models.User{},
 		&models.Order{},
 		&models.OrderItem{},
 		&models.TicketStock{},
+		&models.Seat{},
 	); err != nil {
 		log.Fatal("Failed to migrate database:", err)
 	}
 
+	// Repositories
 	userRepo := repository.NewUserRepository(db)
 	orderRepo := repository.NewOrderRepository(db)
+	seatRepo := repository.NewSeatRepository(db)
 
+	// Services
 	jwtExpiry, _ := time.ParseDuration(cfg.JWTExpiry)
 	authService := services.NewAuthService(userRepo, cfg.JWTSecret, jwtExpiry)
-
 	midtransService := services.NewMidtransService(cfg.MidtransServerKey)
-	orderService := services.NewOrderService(orderRepo, midtransService)
+	seatService := services.NewSeatService(seatRepo)
+	orderService := services.NewOrderService(orderRepo, midtransService, seatService)
 
+	// ✅ Seed seats on startup (hanya jika belum ada)
+	if err := seatService.SeedIfEmpty(); err != nil {
+		log.Println("Warning: seat seeding failed:", err)
+	}
+
+	// Handlers
 	authHandler := handlers.NewAuthHandler(authService)
 	orderHandler := handlers.NewOrderHandler(orderService)
 	paymentHandler := handlers.NewPaymentHandler(orderService)
 	adminHandler := handlers.NewAdminHandler(db)
+	seatHandler := handlers.NewSeatHandler(seatService)
 
-	e := setupRouter(cfg, authHandler, orderHandler, paymentHandler, adminHandler)
+	e := setupRouter(cfg, authHandler, orderHandler, paymentHandler, adminHandler, seatHandler)
 
 	log.Printf("API starting at port %s", cfg.Port)
 	log.Printf("Environment: %s", cfg.Environment)
@@ -86,6 +98,7 @@ func setupRouter(
 	orderHandler *handlers.OrderHandler,
 	paymentHandler *handlers.PaymentHandler,
 	adminHandler *handlers.AdminHandler,
+	seatHandler *handlers.SeatHandler,
 ) *echo.Echo {
 	e := echo.New()
 	e.HideBanner = true
@@ -103,6 +116,7 @@ func setupRouter(
 	api := e.Group("/api")
 	api.GET("/health", authHandler.HealthCheck)
 
+	// Auth
 	auth := api.Group("/auth")
 	auth.POST("/register", authHandler.Register)
 	auth.POST("/login", authHandler.Login)
@@ -111,13 +125,22 @@ func setupRouter(
 	protected.Use(middleware.AuthMiddleware(cfg.JWTSecret))
 	protected.GET("/me", authHandler.GetCurrentUser)
 
+	// Orders
 	orders := api.Group("/orders")
 	orders.Use(middleware.AuthMiddleware(cfg.JWTSecret))
 	orders.POST("", orderHandler.CreateOrder)
 	orders.GET("", orderHandler.GetUserOrders)
 	orders.GET("/:orderCode", orderHandler.GetOrder)
 
+	// Payment webhook
 	api.POST("/payment/notification", paymentHandler.HandleNotification)
+
+	// ✅ Seats (protected — perlu login)
+	seats := api.Group("/seats")
+	seats.Use(middleware.AuthMiddleware(cfg.JWTSecret))
+	seats.GET("", seatHandler.GetSeats)              // GET /api/seats?section=CAT2
+	seats.POST("/reserve", seatHandler.ReserveSeats) // POST /api/seats/reserve
+	seats.POST("/release", seatHandler.ReleaseSeats) // POST /api/seats/release
 
 	// Admin routes
 	admin := api.Group("/admin")
