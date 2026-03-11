@@ -27,7 +27,6 @@ const STATUS_COLORS: Record<string, string> = {
   failed: "bg-red-100 text-red-600",
   expired: "bg-gray-100 text-gray-500",
 };
-
 const STATUS_LABEL: Record<string, string> = {
   paid: "Lunas",
   pending: "Menunggu",
@@ -41,6 +40,75 @@ const formatRupiah = (n: number) =>
     currency: "IDR",
     minimumFractionDigits: 0,
   }).format(n);
+
+// ── SVG Icons ────────────────────────────────────────────────────────────────
+const IconRevenue = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    height="24"
+    viewBox="0 -960 960 960"
+    width="24"
+    fill="currentColor"
+  >
+    <path d="M441-120v-86q-53-12-91.5-46T293-348l74-30q15 48 44.5 73t77.5 25q41 0 69.5-18.5T587-356q0-35-22-55.5T463-458q-86-27-118-64.5T313-614q0-65 42-101t86-41v-84h80v84q50 8 82.5 36.5T651-650l-74 32q-12-32-34-48t-60-16q-44 0-67 19.5T393-614q0 33 30 52t104 40q69 20 104.5 63.5T667-358q0 71-42 108t-104 46v84h-80Z" />
+  </svg>
+);
+const IconOrders = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    height="24"
+    viewBox="0 -960 960 960"
+    width="24"
+    fill="currentColor"
+  >
+    <path d="M320-280q17 0 28.5-11.5T360-320q0-17-11.5-28.5T320-360q-17 0-28.5 11.5T280-320q0 17 11.5 28.5T320-280Zm0-160q17 0 28.5-11.5T360-480q0-17-11.5-28.5T320-520q-17 0-28.5 11.5T280-480q0 17 11.5 28.5T320-440Zm0-160q17 0 28.5-11.5T360-640q0-17-11.5-28.5T320-680q-17 0-28.5 11.5T280-640q0 17 11.5 28.5T320-600Zm120 320h240v-80H440v80Zm0-160h240v-80H440v80Zm0-160h240v-80H440v80ZM200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm0-560v560-560Z" />
+  </svg>
+);
+const IconPaid = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    height="24"
+    viewBox="0 -960 960 960"
+    width="24"
+    fill="currentColor"
+  >
+    <path d="m424-296 282-282-56-56-226 226-114-114-56 56 170 170Zm56 216q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z" />
+  </svg>
+);
+const IconTicket = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    height="24"
+    viewBox="0 -960 960 960"
+    width="24"
+    fill="currentColor"
+  >
+    <path d="M160-280v-160q33 0 56.5-23.5T240-520q0-33-23.5-56.5T160-600v-160h640v160q-33 0-56.5 23.5T720-520q0 33 23.5 56.5T800-440v160H160Zm80-80h480v-104q-37-20-58.5-55.5T640-600q0-43 21.5-78.5T720-734v-26H240v26q37 20 58.5 55.5T320-600q0 43-21.5 78.5T240-466v106Zm240-190Z" />
+  </svg>
+);
+const IconBox = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    height="24"
+    viewBox="0 -960 960 960"
+    width="24"
+    fill="currentColor"
+  >
+    <path d="M480-80 120-280v-400l360-200 360 200v400L480-80Zm0-447 263-146-263-146-263 146 263 146Zm0 384 280-155v-312L480-456 200-610v312l280 155Zm0-384Z" />
+  </svg>
+);
+const IconNoTicket = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    height="24"
+    viewBox="0 -960 960 960"
+    width="24"
+    fill="currentColor"
+  >
+    <path d="M560-440q-42 0-71-29t-29-71q0-42 29-71t71-29q42 0 71 29t29 71q0 42-29 71t-71 29ZM280-320q-33 0-56.5-23.5T200-400v-320q0-33 23.5-56.5T280-800h560q33 0 56.5 23.5T920-720v320q0 33-23.5 56.5T840-320H280Zm80-80h400q0-33 23.5-56.5T840-480v-160q-33 0-56.5-23.5T760-720H360q0 33-23.5 56.5T280-640v160q33 0 56.5 23.5T360-400Zm-240 240q-33 0-56.5-23.5T40-240v-440h80v440h680v80H120Zm160-400Z" />
+  </svg>
+);
+// ─────────────────────────────────────────────────────────────────────────────
 
 const AdminPage: React.FC = () => {
   const navigate = useNavigate();
@@ -60,6 +128,7 @@ const AdminPage: React.FC = () => {
   });
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
+  const [saveMsgType, setSaveMsgType] = useState<"ok" | "err">("ok");
 
   useEffect(() => {
     adminService.getStats().then(setStats).catch(console.error);
@@ -91,14 +160,43 @@ const AdminPage: React.FC = () => {
       const refreshed = await adminService.getTicketStocks();
       setStocks(refreshed);
       setStockForm({ section: "", type: "", stock: 0, price: 0 });
-      setSaveMsg("✅ Saved!");
+      setSaveMsgType("ok");
+      setSaveMsg("Saved!");
     } catch {
-      setSaveMsg("❌ Failed to save.");
+      setSaveMsgType("err");
+      setSaveMsg("Failed to save.");
     } finally {
       setSaving(false);
       setTimeout(() => setSaveMsg(""), 3000);
     }
   };
+
+  const STAT_CARDS = [
+    {
+      label: "Total Revenue",
+      value: formatRupiah(stats?.totalRevenue ?? 0),
+      icon: <IconRevenue />,
+      color: "text-emerald-600 bg-emerald-50",
+    },
+    {
+      label: "Total Orders",
+      value: stats?.totalOrders ?? 0,
+      icon: <IconOrders />,
+      color: "text-blue-600 bg-blue-50",
+    },
+    {
+      label: "Paid Orders",
+      value: stats?.paidOrders ?? 0,
+      icon: <IconPaid />,
+      color: "text-green-600 bg-green-50",
+    },
+    {
+      label: "Tickets Sold",
+      value: stats?.totalTicketsSold ?? 0,
+      icon: <IconTicket />,
+      color: "text-purple-600 bg-purple-50",
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] pt-[72px]">
@@ -145,38 +243,20 @@ const AdminPage: React.FC = () => {
           ))}
         </div>
 
-        {/* ───────────── DASHBOARD ───────────── */}
+        {/* ── DASHBOARD ── */}
         {tab === "dashboard" && (
           <div className="space-y-6">
-            {/* Stat Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                {
-                  label: "Total Revenue",
-                  value: formatRupiah(stats?.totalRevenue ?? 0),
-                  icon: "💰",
-                },
-                {
-                  label: "Total Orders",
-                  value: stats?.totalOrders ?? 0,
-                  icon: "📋",
-                },
-                {
-                  label: "Paid Orders",
-                  value: stats?.paidOrders ?? 0,
-                  icon: "✅",
-                },
-                {
-                  label: "Tickets Sold",
-                  value: stats?.totalTicketsSold ?? 0,
-                  icon: "🎟",
-                },
-              ].map((card) => (
+              {STAT_CARDS.map((card) => (
                 <div
                   key={card.label}
                   className="bg-white rounded-2xl shadow-sm p-6"
                 >
-                  <div className="text-2xl mb-3">{card.icon}</div>
+                  <div
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${card.color}`}
+                  >
+                    {card.icon}
+                  </div>
                   <div className="text-2xl font-bold text-[#1a1a1a]">
                     {card.value}
                   </div>
@@ -185,7 +265,6 @@ const AdminPage: React.FC = () => {
               ))}
             </div>
 
-            {/* Sales Chart */}
             <div className="bg-white rounded-2xl shadow-sm p-6">
               <h2 className="font-bold text-[#1a1a1a] text-lg mb-1">
                 Sales — Last 30 Days
@@ -287,10 +366,9 @@ const AdminPage: React.FC = () => {
           </div>
         )}
 
-        {/* ───────────── ORDERS ───────────── */}
+        {/* ── ORDERS ── */}
         {tab === "orders" && (
           <div className="space-y-4">
-            {/* Filter bar */}
             <div className="flex gap-2 flex-wrap items-center">
               {["", "pending", "paid", "failed", "expired"].map((s) => (
                 <button
@@ -313,7 +391,6 @@ const AdminPage: React.FC = () => {
               </span>
             </div>
 
-            {/* Table */}
             <div className="bg-white rounded-2xl shadow-sm overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -339,7 +416,9 @@ const AdminPage: React.FC = () => {
                   {orders.length === 0 && (
                     <tr>
                       <td colSpan={6} className="text-center py-16 text-[#999]">
-                        <div className="text-4xl mb-3">📦</div>
+                        <div className="flex justify-center mb-3 text-[#ccc]">
+                          <IconBox />
+                        </div>
                         <p className="text-sm">No orders found.</p>
                       </td>
                     </tr>
@@ -372,10 +451,7 @@ const AdminPage: React.FC = () => {
                       </td>
                       <td className="px-5 py-4">
                         <span
-                          className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                            STATUS_COLORS[order.status] ??
-                            "bg-gray-100 text-gray-500"
-                          }`}
+                          className={`px-3 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[order.status] ?? "bg-gray-100 text-gray-500"}`}
                         >
                           {STATUS_LABEL[order.status] ?? order.status}
                         </span>
@@ -393,7 +469,6 @@ const AdminPage: React.FC = () => {
               </table>
             </div>
 
-            {/* Pagination */}
             <div className="flex gap-2 justify-end items-center">
               <button
                 onClick={() => setOrderPage((p) => Math.max(1, p - 1))}
@@ -414,10 +489,9 @@ const AdminPage: React.FC = () => {
           </div>
         )}
 
-        {/* ───────────── TICKET STOCK ───────────── */}
+        {/* ── TICKET STOCK ── */}
         {tab === "stocks" && (
           <div className="space-y-6">
-            {/* Form */}
             <div className="bg-white rounded-2xl shadow-sm p-6">
               <h2 className="font-bold text-[#1a1a1a] text-lg mb-6">
                 Add / Update Stock
@@ -501,13 +575,37 @@ const AdminPage: React.FC = () => {
                     {saving ? "Saving..." : "Save Stock"}
                   </button>
                   {saveMsg && (
-                    <span className="text-sm text-[#666]">{saveMsg}</span>
+                    <span
+                      className={`text-sm font-medium flex items-center gap-1.5 ${saveMsgType === "ok" ? "text-green-600" : "text-red-500"}`}
+                    >
+                      {saveMsgType === "ok" ? (
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          height="16"
+                          viewBox="0 -960 960 960"
+                          width="16"
+                          fill="currentColor"
+                        >
+                          <path d="m424-296 282-282-56-56-226 226-114-114-56 56 170 170Z" />
+                        </svg>
+                      ) : (
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          height="16"
+                          viewBox="0 -960 960 960"
+                          width="16"
+                          fill="currentColor"
+                        >
+                          <path d="M480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Zm-40 200h80v-240h-80v240Zm40-320q17 0 28.5-11.5T520-640q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640q0 17 11.5 28.5T480-600Z" />
+                        </svg>
+                      )}
+                      {saveMsg}
+                    </span>
                   )}
                 </div>
               </form>
             </div>
 
-            {/* Stock Table */}
             <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
@@ -526,7 +624,9 @@ const AdminPage: React.FC = () => {
                   {stocks.length === 0 && (
                     <tr>
                       <td colSpan={4} className="text-center py-16 text-[#999]">
-                        <div className="text-4xl mb-3">🎫</div>
+                        <div className="flex justify-center mb-3 text-[#ccc]">
+                          <IconNoTicket />
+                        </div>
                         <p className="text-sm">
                           No stocks configured yet. Add one above.
                         </p>
@@ -546,13 +646,7 @@ const AdminPage: React.FC = () => {
                       </td>
                       <td className="px-5 py-4">
                         <span
-                          className={`font-bold ${
-                            s.stock === 0
-                              ? "text-red-500"
-                              : s.stock < 10
-                                ? "text-yellow-500"
-                                : "text-[#1a1a1a]"
-                          }`}
+                          className={`font-bold ${s.stock === 0 ? "text-red-500" : s.stock < 10 ? "text-yellow-500" : "text-[#1a1a1a]"}`}
                         >
                           {s.stock}
                           {s.stock === 0 && (

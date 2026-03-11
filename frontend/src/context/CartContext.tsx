@@ -9,13 +9,13 @@ import React, {
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface CartItem {
-  id: string; // unique key: section + type + seatIds joined
+  id: string;
   section: string;
   type: string;
   priceEach: number;
   quantity: number;
-  seatIds: string[]; // kosong untuk standing
-  seatLabels: string[]; // kosong untuk standing, e.g. ["IA1", "IA2"]
+  seatIds: string[];
+  seatLabels: string[];
 }
 
 export interface AddCartItemInput {
@@ -31,6 +31,7 @@ interface CartContextType {
   cart: CartItem[];
   addItem: (input: AddCartItemInput) => void;
   removeItem: (id: string) => void;
+  decreaseItem: (id: string) => void; // ← kurangi 1, hapus jika 0
   clearCart: () => void;
   totalItems: number;
   totalPrice: number;
@@ -58,16 +59,12 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
 
   const addItem = (input: AddCartItemInput) => {
     const isSeated = input.seatIds.length > 0;
-
-    // Seated ticket: ID unik per kombinasi seat
-    // Standing ticket: ID unik per section+type, qty bisa di-stack
     const id = isSeated
       ? `${input.section}-${input.type}-${input.seatIds.sort().join("_")}`
       : `${input.section}-${input.type}`;
 
     setCart((prev) => {
       if (isSeated) {
-        // Seated: selalu replace (bukan stack), karena seat list bisa berubah
         const exists = prev.find((i) => i.id === id);
         if (exists) {
           return prev.map((i) =>
@@ -83,7 +80,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
         }
         return [...prev, { id, ...input }];
       } else {
-        // Standing: stack quantity
         const exists = prev.find((i) => i.id === id);
         if (exists) {
           return prev.map((i) =>
@@ -95,8 +91,18 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
     });
   };
 
+  // Hapus item sepenuhnya
   const removeItem = (id: string) => {
     setCart((prev) => prev.filter((i) => i.id !== id));
+  };
+
+  // Kurangi 1, hapus jika qty jadi 0
+  const decreaseItem = (id: string) => {
+    setCart((prev) =>
+      prev
+        .map((i) => (i.id === id ? { ...i, quantity: i.quantity - 1 } : i))
+        .filter((i) => i.quantity > 0),
+    );
   };
 
   const clearCart = () => {
@@ -109,7 +115,15 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
 
   return (
     <CartContext.Provider
-      value={{ cart, addItem, removeItem, clearCart, totalItems, totalPrice }}
+      value={{
+        cart,
+        addItem,
+        removeItem,
+        decreaseItem,
+        clearCart,
+        totalItems,
+        totalPrice,
+      }}
     >
       {children}
     </CartContext.Provider>
@@ -118,8 +132,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
 
 export const useCartContext = (): CartContextType => {
   const context = useContext(CartContext);
-  if (!context) {
+  if (!context)
     throw new Error("useCartContext must be used within a CartProvider");
-  }
   return context;
 };

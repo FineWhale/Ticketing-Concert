@@ -1,16 +1,12 @@
-import React, { useState } from "react";
+import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Header, SeatMap, TicketPanel } from "../organisms";
-import { SeatPickerModal } from "../organisms/SeatPickerModal";
-
-type BlockID = "i" | "j" | "k" | "l";
 
 const RUNNING_TEXT =
   "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. ";
 
 const BookTicketPage: React.FC = () => {
   const navigate = useNavigate();
-  const [seatModal, setSeatModal] = useState<BlockID | null>(null);
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] pt-[72px]">
@@ -26,8 +22,9 @@ const BookTicketPage: React.FC = () => {
         onBookClick={() => navigate("/book-ticket")}
       />
 
+      {/* Hero — hapus overflow-hidden, pakai isolate supaya tidak buat stacking context baru */}
       <section
-        className="relative w-full min-h-[380px] md:min-h-[380px] overflow-hidden"
+        className="relative w-full min-h-[380px] md:min-h-[380px]"
         aria-label="Event hero"
       >
         <img
@@ -49,6 +46,7 @@ const BookTicketPage: React.FC = () => {
         </div>
       </section>
 
+      {/* Running text */}
       <div
         className="w-full bg-running-text-bg py-[14px] overflow-hidden"
         role="marquee"
@@ -62,31 +60,25 @@ const BookTicketPage: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-[1fr_400px] gap-0 max-w-full bg-white">
-        {/* SeatMap — sticky */}
+        {/* SeatMap */}
         <div
           className="px-4 md:px-6 pt-12 md:pt-16 pb-4 md:pb-6 border-r-0 md:border-r border-[#e0e0e0]
-                      sticky top-[72px] self-start
-                      h-[calc(100vh-72px)] overflow-hidden"
+                     sticky top-[72px] self-start
+                     h-[calc(100vh-72px)] overflow-hidden"
         >
           <SeatMap />
         </div>
 
-        {/* TicketPanel — scrollable */}
+        {/* TicketPanel — modal di-handle di dalam TicketPanel sendiri */}
         <div
           className="p-4 md:p-6 flex flex-col
-                      h-[calc(100vh-72px)] overflow-y-auto sticky top-[72px] self-start"
+                     h-[calc(100vh-72px)] overflow-y-auto sticky top-[72px] self-start"
         >
-          <TicketPanel onOpenSeatPicker={(block) => setSeatModal(block)} />
+          <TicketPanel />
         </div>
       </div>
 
-      {seatModal && (
-        <SeatPickerModal
-          block={seatModal}
-          onConfirm={() => setSeatModal(null)}
-          onClose={() => setSeatModal(null)}
-        />
-      )}
+      {/* JANGAN render SeatPickerModal di sini lagi — sudah di-handle di dalam TicketPanel */}
     </div>
   );
 };

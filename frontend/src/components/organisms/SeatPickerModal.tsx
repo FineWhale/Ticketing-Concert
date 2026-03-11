@@ -20,17 +20,21 @@ const BLOCK_SECTION: Record<BlockID, "CAT2" | "CAT4"> = {
 
 interface Props {
   block: BlockID;
+  initialSelected?: string[];
   onConfirm: (selectedSeats: Seat[]) => void;
   onClose: () => void;
 }
 
 export const SeatPickerModal: React.FC<Props> = ({
   block,
+  initialSelected = [],
   onConfirm,
   onClose,
 }) => {
   const [seats, setSeats] = useState<Seat[]>([]);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selected, setSelected] = useState<Set<string>>(
+    new Set(initialSelected),
+  );
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -50,6 +54,10 @@ export const SeatPickerModal: React.FC<Props> = ({
       .finally(() => setLoading(false));
   }, [block]);
 
+  useEffect(() => {
+    setSelected(new Set(initialSelected));
+  }, [block]);
+
   const toggle = (seat: Seat) => {
     if (seat.status !== "available") return;
     setSelected((prev) => {
@@ -61,17 +69,16 @@ export const SeatPickerModal: React.FC<Props> = ({
 
   const selectedSeats = seats.filter((s) => selected.has(s.id));
 
-  // Close on backdrop click
-  const onBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) onClose();
-  };
-
   return (
+    // Backdrop: fixed full screen, z-50, background hitam penuh dari top 0
     <div
-      className="fixed inset-0 z-50 flex justify-center bg-black/50 px-4 pt-[80px] pb-4"
-      onClick={onBackdropClick}
+      className="fixed inset-0 z-50 bg-black/60 flex items-start justify-center overflow-y-auto"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
-      <div className="bg-white rounded-2xl w-full max-w-xl h-full max-h-[calc(100vh-96px)] overflow-hidden flex flex-col shadow-2xl">
+      {/* Modal: margin top 80px (tinggi navbar), tidak pakai padding di backdrop */}
+      <div className="relative bg-white rounded-2xl w-full max-w-xl mx-4 mt-[80px] mb-6 flex flex-col shadow-2xl max-h-[calc(100vh-104px)]">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
           <div>
@@ -110,11 +117,11 @@ export const SeatPickerModal: React.FC<Props> = ({
         {/* Seat grid */}
         <div className="flex-1 overflow-y-auto px-4 py-4 min-h-0">
           {loading ? (
-            <div className="flex items-center justify-center h-full text-[#999] text-sm">
+            <div className="flex items-center justify-center h-40 text-[#999] text-sm">
               Loading seats...
             </div>
           ) : seats.length === 0 ? (
-            <div className="flex items-center justify-center h-full text-[#999] text-sm">
+            <div className="flex items-center justify-center h-40 text-[#999] text-sm">
               Tidak ada data kursi.
             </div>
           ) : (
