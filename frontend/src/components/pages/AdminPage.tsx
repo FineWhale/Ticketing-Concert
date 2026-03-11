@@ -1,117 +1,102 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
+import { adminService } from "../../services/adminService";
 import { Header } from "../organisms";
+import type {
+  AdminStats,
+  SalesChartPoint,
+  TicketStock,
+  AdminOrder,
+} from "../../types/admin.types";
 
-interface OrderItem {
-  id: string;
-  section: string;
-  type: string;
-  quantity: number;
-  priceEach: number;
-}
+type Tab = "dashboard" | "orders" | "stocks";
 
-interface Order {
-  id: string;
-  orderCode: string;
-  totalAmount: number;
-  status: string;
-  customerName: string;
-  customerEmail: string;
-  customerPhone: string;
-  createdAt: string;
-  items: OrderItem[];
-  snapToken: string;
-  paymentUrl: string;
-}
-
-const STATUS_STYLE: Record<string, string> = {
-  pending: "bg-yellow-100 text-yellow-700",
+const STATUS_COLORS: Record<string, string> = {
   paid: "bg-green-100 text-green-700",
+  pending: "bg-yellow-100 text-yellow-700",
   failed: "bg-red-100 text-red-600",
   expired: "bg-gray-100 text-gray-500",
 };
 
 const STATUS_LABEL: Record<string, string> = {
-  pending: "Menunggu Pembayaran",
   paid: "Lunas",
+  pending: "Menunggu",
   failed: "Gagal",
   expired: "Kedaluwarsa",
 };
 
-const TYPE_BADGE: Record<string, string> = {
-  VIP: "bg-yellow-100 text-yellow-700",
-  Premium: "bg-blue-100 text-blue-700",
-  Regular: "bg-orange-100 text-orange-700",
-  General: "bg-gray-100 text-gray-600",
-};
+const formatRupiah = (n: number) =>
+  new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+  }).format(n);
 
-const OrdersPage: React.FC = () => {
+const AdminPage: React.FC = () => {
   const navigate = useNavigate();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
-
-  const formatPrice = (price: number) =>
-    new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      minimumFractionDigits: 0,
-    }).format(price);
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("id-ID", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const fetchOrders = useCallback(async () => {
-    const token = localStorage.getItem("authToken");
-    if (!token) {
-      navigate("/login");
-      return;
-    }
-    setLoading(true);
-    try {
-      const response = await fetch("http://localhost:5000/api/orders", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.status === 401) {
-        navigate("/login");
-        return;
-      }
-      if (!response.ok) throw new Error("Gagal mengambil data orders");
-      const data = await response.json();
-      setOrders(data || []);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [navigate]);
+  const [tab, setTab] = useState<Tab>("dashboard");
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [chartData, setChartData] = useState<SalesChartPoint[]>([]);
+  const [orders, setOrders] = useState<AdminOrder[]>([]);
+  const [orderTotal, setOrderTotal] = useState(0);
+  const [orderPage, setOrderPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState("");
+  const [stocks, setStocks] = useState<TicketStock[]>([]);
+  const [stockForm, setStockForm] = useState({
+    section: "",
+    type: "",
+    stock: 0,
+    price: 0,
+  });
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState("");
 
   useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
+    adminService.getStats().then(setStats).catch(console.error);
+    adminService.getSalesChart(30).then(setChartData).catch(console.error);
+  }, []);
 
-  const toggleExpand = (orderCode: string) => {
-    setExpandedOrder(expandedOrder === orderCode ? null : orderCode);
-  };
+  useEffect(() => {
+    if (tab !== "orders") return;
+    adminService
+      .getOrders(orderPage, 20, statusFilter)
+      .then((res) => {
+        setOrders(res.orders ?? []);
+        setOrderTotal(res.total ?? 0);
+      })
+      .catch(console.error);
+  }, [tab, orderPage, statusFilter]);
 
-  const handleContinuePayment = (snapToken: string) => {
-    if ((window as any).snap) {
-      (window as any).snap.pay(snapToken, {
-        onSuccess: () => fetchOrders(),
-        onPending: () => fetchOrders(),
-        onError: () => alert("Pembayaran gagal, silakan coba lagi."),
-        onClose: () => {},
-      });
-    } else {
-      alert("Midtrans Snap belum siap, coba refresh halaman.");
+  useEffect(() => {
+    if (tab !== "stocks") return;
+    adminService.getTicketStocks().then(setStocks).catch(console.error);
+  }, [tab]);
+
+  const handleUpsertStock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setSaveMsg("");
+    try {
+      await adminService.upsertTicketStock(stockForm);
+      const refreshed = await adminService.getTicketStocks();
+      setStocks(refreshed);
+      setStockForm({ section: "", type: "", stock: 0, price: 0 });
+      setSaveMsg("✅ Saved!");
+    } catch {
+      setSaveMsg("❌ Failed to save.");
+    } finally {
+      setSaving(false);
+      setTimeout(() => setSaveMsg(""), 3000);
     }
   };
 
@@ -122,224 +107,474 @@ const OrdersPage: React.FC = () => {
         onBookClick={() => navigate("/book-ticket")}
       />
 
-      <div className="max-w-lg mx-auto py-10 px-4">
-        {/* BACK BUTTON */}
-        <button
-          onClick={() => navigate("/")}
-          className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-6 transition-colors"
-        >
-          ← Kembali ke Home
-        </button>
-
-        <div className="flex items-center justify-between mb-1">
-          <h1 className="text-2xl font-bold text-gray-900">My Orders</h1>
+      <div className="max-w-[1200px] mx-auto px-5 md:px-8 py-10">
+        {/* Page Title */}
+        <div className="mb-8">
           <button
-            onClick={() => fetchOrders()}
-            className="text-xs text-gray-400 hover:text-gray-700 transition-colors"
+            onClick={() => navigate("/")}
+            className="flex items-center gap-2 text-sm text-[#666] hover:text-[#1a1a1a] mb-4 transition-colors"
           >
-            ⟲
+            ← Kembali ke Home
           </button>
+          <h1 className="text-3xl font-bold text-[#1a1a1a]">Admin Panel</h1>
+          <p className="text-sm text-[#999] mt-1">
+            Beach Boys — 60 Years of Pet Sounds
+          </p>
         </div>
-        <p className="text-sm text-gray-400 mb-6">
-          Riwayat pembelian tiket kamu
-        </p>
 
-        {/* LOADING */}
-        {loading && (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="bg-white rounded-2xl shadow-sm p-6 animate-pulse"
-              >
-                <div className="h-4 bg-gray-200 rounded w-1/3 mb-3" />
-                <div className="h-3 bg-gray-100 rounded w-1/2 mb-2" />
-                <div className="h-3 bg-gray-100 rounded w-1/4" />
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* ERROR */}
-        {error && !loading && (
-          <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center">
-            <p className="text-red-500 font-medium mb-3">{error}</p>
+        {/* Tabs */}
+        <div className="flex gap-2 mb-8">
+          {(
+            [
+              { key: "dashboard", label: "Dashboard" },
+              { key: "orders", label: "Orders" },
+              { key: "stocks", label: "Ticket Stock" },
+            ] as { key: Tab; label: string }[]
+          ).map(({ key, label }) => (
             <button
-              onClick={() => fetchOrders()}
-              className="px-4 py-2 bg-gray-900 text-white rounded-full text-sm font-semibold"
+              key={key}
+              onClick={() => setTab(key)}
+              className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${
+                tab === key
+                  ? "bg-[#1a1a1a] text-white"
+                  : "bg-white text-[#666] hover:bg-[#f0f0f0]"
+              }`}
             >
-              Coba Lagi
+              {label}
             </button>
+          ))}
+        </div>
+
+        {/* ───────────── DASHBOARD ───────────── */}
+        {tab === "dashboard" && (
+          <div className="space-y-6">
+            {/* Stat Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                {
+                  label: "Total Revenue",
+                  value: formatRupiah(stats?.totalRevenue ?? 0),
+                  icon: "💰",
+                },
+                {
+                  label: "Total Orders",
+                  value: stats?.totalOrders ?? 0,
+                  icon: "📋",
+                },
+                {
+                  label: "Paid Orders",
+                  value: stats?.paidOrders ?? 0,
+                  icon: "✅",
+                },
+                {
+                  label: "Tickets Sold",
+                  value: stats?.totalTicketsSold ?? 0,
+                  icon: "🎟",
+                },
+              ].map((card) => (
+                <div
+                  key={card.label}
+                  className="bg-white rounded-2xl shadow-sm p-6"
+                >
+                  <div className="text-2xl mb-3">{card.icon}</div>
+                  <div className="text-2xl font-bold text-[#1a1a1a]">
+                    {card.value}
+                  </div>
+                  <div className="text-sm text-[#999] mt-1">{card.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Sales Chart */}
+            <div className="bg-white rounded-2xl shadow-sm p-6">
+              <h2 className="font-bold text-[#1a1a1a] text-lg mb-1">
+                Sales — Last 30 Days
+              </h2>
+              <p className="text-xs text-[#999] mb-6">
+                Revenue (left) & Orders count (right)
+              </p>
+              {chartData.length === 0 ? (
+                <div className="flex items-center justify-center h-48 text-[#999] text-sm">
+                  No sales data yet.
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={280}>
+                  <AreaChart data={chartData}>
+                    <defs>
+                      <linearGradient
+                        id="gradRevenue"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop
+                          offset="5%"
+                          stopColor="#1a1a1a"
+                          stopOpacity={0.15}
+                        />
+                        <stop
+                          offset="95%"
+                          stopColor="#1a1a1a"
+                          stopOpacity={0}
+                        />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 11, fill: "#999" }}
+                      tickFormatter={(v: string) => v.slice(5)}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      yAxisId="left"
+                      tick={{ fontSize: 11, fill: "#999" }}
+                      axisLine={false}
+                      tickLine={false}
+                      tickFormatter={(v: number) =>
+                        v >= 1000000
+                          ? `${(v / 1000000).toFixed(1)}M`
+                          : `${(v / 1000).toFixed(0)}K`
+                      }
+                    />
+                    <YAxis
+                      yAxisId="right"
+                      orientation="right"
+                      tick={{ fontSize: 11, fill: "#999" }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        borderRadius: "12px",
+                        border: "none",
+                        boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+                        fontSize: "12px",
+                      }}
+                      formatter={(val, name) => [
+                        name === "revenue" ? formatRupiah(Number(val)) : val,
+                        name as string,
+                      ]}
+                    />
+                    <Legend
+                      wrapperStyle={{ fontSize: "12px", color: "#666" }}
+                    />
+                    <Area
+                      yAxisId="left"
+                      type="monotone"
+                      dataKey="revenue"
+                      stroke="#1a1a1a"
+                      fill="url(#gradRevenue)"
+                      strokeWidth={2}
+                      name="revenue"
+                    />
+                    <Area
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="orders"
+                      stroke="#fee505"
+                      fill="none"
+                      strokeWidth={2}
+                      strokeDasharray="5 3"
+                      name="orders"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
+            </div>
           </div>
         )}
 
-        {/* EMPTY STATE */}
-        {!loading && !error && orders.length === 0 && (
-          <div className="bg-white rounded-2xl shadow-sm p-10 text-center">
-            <div className="text-5xl mb-4">🎫</div>
-            <h3 className="text-lg font-bold text-gray-800 mb-2">
-              Belum Ada Order
-            </h3>
-            <p className="text-sm text-gray-400 mb-6">
-              Kamu belum pernah membeli tiket. Yuk, book sekarang!
-            </p>
-            <button
-              onClick={() => navigate("/book-ticket")}
-              className="px-6 py-3 bg-gray-900 text-white rounded-full font-bold text-sm hover:bg-gray-700 transition-colors"
-            >
-              Book Ticket →
-            </button>
-          </div>
-        )}
-
-        {/* ORDER LIST */}
-        {!loading && !error && orders.length > 0 && (
+        {/* ───────────── ORDERS ───────────── */}
+        {tab === "orders" && (
           <div className="space-y-4">
-            {orders.map((order) => (
-              <div
-                key={order.orderCode}
-                className="bg-white rounded-2xl shadow-sm overflow-hidden"
-              >
-                {/* ORDER HEADER */}
-                <div className="p-5">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <p className="text-xs text-gray-400 mb-0.5">Order ID</p>
-                      <p className="text-sm font-mono font-bold text-gray-900">
-                        {order.orderCode}
-                      </p>
-                    </div>
-                    <span
-                      className={`text-[11px] font-semibold px-3 py-1 rounded-full ${STATUS_STYLE[order.status] || "bg-gray-100 text-gray-500"}`}
-                    >
-                      {STATUS_LABEL[order.status] || order.status}
-                    </span>
-                  </div>
+            {/* Filter bar */}
+            <div className="flex gap-2 flex-wrap items-center">
+              {["", "pending", "paid", "failed", "expired"].map((s) => (
+                <button
+                  key={s || "all"}
+                  onClick={() => {
+                    setStatusFilter(s);
+                    setOrderPage(1);
+                  }}
+                  className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all capitalize ${
+                    statusFilter === s
+                      ? "bg-[#1a1a1a] text-white"
+                      : "bg-white text-[#666] hover:bg-[#f0f0f0]"
+                  }`}
+                >
+                  {s || "All"}
+                </button>
+              ))}
+              <span className="ml-auto text-sm text-[#999]">
+                {orderTotal} orders
+              </span>
+            </div>
 
-                  {/* CONCERT INFO */}
-                  <div className="bg-gray-100 text-black rounded-xl p-4 mb-3">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-0.5">
-                          The Beach Boys Concert
-                        </p>
-                        <p className="text-sm font-bold">
-                          60 Years of Pet Sounds
-                        </p>
-                        <p className="text-xs text-gray-400 mt-1">
-                          17 Aug 2026 · GBK Jakarta
-                        </p>
-                      </div>
-                      <span className="text-xl">🎵</span>
-                    </div>
-                  </div>
-
-                  {/* TICKET SUMMARY */}
-                  <div className="flex flex-wrap gap-1.5 mb-3">
-                    {order.items?.map((item, idx) => (
-                      <div key={idx} className="flex items-center gap-1">
-                        <span
-                          className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${TYPE_BADGE[item.type] || "bg-gray-100 text-gray-500"}`}
-                        >
-                          {item.type}
-                        </span>
-                        <span className="text-[10px] text-gray-500">
-                          {item.section} ×{item.quantity}
-                        </span>
-                      </div>
+            {/* Table */}
+            <div className="bg-white rounded-2xl shadow-sm overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[#f0f0f0]">
+                    {[
+                      "Order Code",
+                      "Customer",
+                      "Items",
+                      "Total",
+                      "Status",
+                      "Date",
+                    ].map((h) => (
+                      <th
+                        key={h}
+                        className="px-5 py-4 text-left text-xs font-semibold text-[#999] uppercase tracking-wider"
+                      >
+                        {h}
+                      </th>
                     ))}
-                  </div>
-
-                  {/* TOTAL + DATE */}
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-gray-400">
-                      {formatDate(order.createdAt)}
-                    </p>
-                    <p className="text-base font-bold text-gray-900">
-                      {formatPrice(order.totalAmount)}
-                    </p>
-                  </div>
-
-                  {/* LANJUTKAN PEMBAYARAN */}
-                  {order.status === "pending" && order.snapToken && (
-                    <button
-                      onClick={() => handleContinuePayment(order.snapToken)}
-                      className="mt-3 w-full py-2.5 bg-yellow text-gray-900 rounded-full text-sm font-bold hover:brightness-95 transition-all"
+                  </tr>
+                </thead>
+                <tbody>
+                  {orders.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="text-center py-16 text-[#999]">
+                        <div className="text-4xl mb-3">📦</div>
+                        <p className="text-sm">No orders found.</p>
+                      </td>
+                    </tr>
+                  )}
+                  {orders.map((order) => (
+                    <tr
+                      key={order.id}
+                      className="border-b border-[#f5f5f5] last:border-0 hover:bg-[#fafafa] transition-colors"
                     >
-                      Lanjutkan Pembayaran
-                    </button>
+                      <td className="px-5 py-4 font-mono text-xs text-[#1a1a1a] font-bold">
+                        {order.orderCode}
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="font-semibold text-[#1a1a1a] text-sm">
+                          {order.customerName}
+                        </div>
+                        <div className="text-[#999] text-xs mt-0.5">
+                          {order.customerEmail}
+                        </div>
+                      </td>
+                      <td className="px-5 py-4 text-[#666] text-xs space-y-1">
+                        {order.items?.map((item, i) => (
+                          <div key={i}>
+                            {item.quantity}× {item.section} ({item.type})
+                          </div>
+                        ))}
+                      </td>
+                      <td className="px-5 py-4 font-bold text-[#1a1a1a]">
+                        {formatRupiah(order.totalAmount)}
+                      </td>
+                      <td className="px-5 py-4">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                            STATUS_COLORS[order.status] ??
+                            "bg-gray-100 text-gray-500"
+                          }`}
+                        >
+                          {STATUS_LABEL[order.status] ?? order.status}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4 text-[#999] text-xs">
+                        {new Date(order.createdAt).toLocaleDateString("id-ID", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            <div className="flex gap-2 justify-end items-center">
+              <button
+                onClick={() => setOrderPage((p) => Math.max(1, p - 1))}
+                disabled={orderPage === 1}
+                className="px-5 py-2 rounded-full text-sm font-semibold bg-white text-[#666] disabled:opacity-40 hover:bg-[#f0f0f0] transition-all"
+              >
+                ← Prev
+              </button>
+              <span className="text-sm text-[#999] px-2">Page {orderPage}</span>
+              <button
+                onClick={() => setOrderPage((p) => p + 1)}
+                disabled={orders.length < 20}
+                className="px-5 py-2 rounded-full text-sm font-semibold bg-white text-[#666] disabled:opacity-40 hover:bg-[#f0f0f0] transition-all"
+              >
+                Next →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ───────────── TICKET STOCK ───────────── */}
+        {tab === "stocks" && (
+          <div className="space-y-6">
+            {/* Form */}
+            <div className="bg-white rounded-2xl shadow-sm p-6">
+              <h2 className="font-bold text-[#1a1a1a] text-lg mb-6">
+                Add / Update Stock
+              </h2>
+              <form
+                onSubmit={handleUpsertStock}
+                className="grid grid-cols-2 md:grid-cols-4 gap-4"
+              >
+                {[
+                  {
+                    label: "Section",
+                    placeholder: "e.g. VIP",
+                    key: "section" as const,
+                    type: "text",
+                  },
+                  {
+                    label: "Type",
+                    placeholder: "e.g. standing",
+                    key: "type" as const,
+                    type: "text",
+                  },
+                ].map(({ label, placeholder, key, type }) => (
+                  <div key={key} className="flex flex-col gap-2">
+                    <label className="text-sm font-medium text-[#1a1a1a]">
+                      {label}
+                    </label>
+                    <input
+                      type={type}
+                      placeholder={placeholder}
+                      className="bg-[#f0f0f0] border-none rounded-full px-5 py-3 text-sm focus:outline-none focus:bg-[#e8e8e8] transition-colors"
+                      value={stockForm[key]}
+                      onChange={(e) =>
+                        setStockForm((f) => ({ ...f, [key]: e.target.value }))
+                      }
+                      required
+                    />
+                  </div>
+                ))}
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium text-[#1a1a1a]">
+                    Stock (qty)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    className="bg-[#f0f0f0] border-none rounded-full px-5 py-3 text-sm focus:outline-none focus:bg-[#e8e8e8] transition-colors"
+                    value={stockForm.stock}
+                    onChange={(e) =>
+                      setStockForm((f) => ({
+                        ...f,
+                        stock: Number(e.target.value),
+                      }))
+                    }
+                    required
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium text-[#1a1a1a]">
+                    Price (Rp)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    className="bg-[#f0f0f0] border-none rounded-full px-5 py-3 text-sm focus:outline-none focus:bg-[#e8e8e8] transition-colors"
+                    value={stockForm.price}
+                    onChange={(e) =>
+                      setStockForm((f) => ({
+                        ...f,
+                        price: Number(e.target.value),
+                      }))
+                    }
+                    required
+                  />
+                </div>
+                <div className="col-span-2 md:col-span-4 flex items-center gap-4 mt-2">
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="bg-[#1a1a1a] hover:bg-[#333] text-white rounded-full px-8 py-3 text-sm font-semibold disabled:opacity-50 transition-colors"
+                  >
+                    {saving ? "Saving..." : "Save Stock"}
+                  </button>
+                  {saveMsg && (
+                    <span className="text-sm text-[#666]">{saveMsg}</span>
                   )}
                 </div>
+              </form>
+            </div>
 
-                {/* EXPAND BUTTON */}
-                <button
-                  onClick={() => toggleExpand(order.orderCode)}
-                  className="w-full py-3 border-t border-gray-100 text-xs font-semibold text-gray-500 hover:text-gray-800 hover:bg-gray-50 transition-colors"
-                >
-                  {expandedOrder === order.orderCode
-                    ? "▲ Sembunyikan Detail"
-                    : "▼ Lihat Detail Tiket"}
-                </button>
-
-                {/* EXPANDED DETAIL */}
-                {expandedOrder === order.orderCode && (
-                  <div className="border-t border-gray-100 px-5 pb-5 pt-4">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                      Detail Tiket
-                    </p>
-                    <div className="space-y-3 mb-4">
-                      {order.items?.map((item, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center justify-between py-2.5 border-b border-gray-50 last:border-0"
+            {/* Stock Table */}
+            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[#f0f0f0]">
+                    {["Section", "Type", "Stock", "Price"].map((h) => (
+                      <th
+                        key={h}
+                        className="px-5 py-4 text-left text-xs font-semibold text-[#999] uppercase tracking-wider"
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {stocks.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="text-center py-16 text-[#999]">
+                        <div className="text-4xl mb-3">🎫</div>
+                        <p className="text-sm">
+                          No stocks configured yet. Add one above.
+                        </p>
+                      </td>
+                    </tr>
+                  )}
+                  {stocks.map((s) => (
+                    <tr
+                      key={s.id}
+                      className="border-b border-[#f5f5f5] last:border-0 hover:bg-[#fafafa] transition-colors"
+                    >
+                      <td className="px-5 py-4 font-bold text-[#1a1a1a]">
+                        {s.section}
+                      </td>
+                      <td className="px-5 py-4 text-[#666] capitalize">
+                        {s.type}
+                      </td>
+                      <td className="px-5 py-4">
+                        <span
+                          className={`font-bold ${
+                            s.stock === 0
+                              ? "text-red-500"
+                              : s.stock < 10
+                                ? "text-yellow-500"
+                                : "text-[#1a1a1a]"
+                          }`}
                         >
-                          <div>
-                            <p className="text-sm font-semibold text-gray-900">
-                              Section {item.section}
-                            </p>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span
-                                className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${TYPE_BADGE[item.type] || "bg-gray-100 text-gray-500"}`}
-                              >
-                                {item.type}
-                              </span>
-                              <span className="text-xs text-gray-400">
-                                {item.quantity} tiket
-                              </span>
-                            </div>
-                          </div>
-                          <p className="text-sm font-bold text-gray-900">
-                            {formatPrice(item.priceEach * item.quantity)}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* CUSTOMER INFO */}
-                    <div className="bg-gray-50 rounded-xl p-4 space-y-2">
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                        Info Pemesan
-                      </p>
-                      {[
-                        { label: "Nama", value: order.customerName },
-                        { label: "Email", value: order.customerEmail },
-                        { label: "Telepon", value: order.customerPhone },
-                      ].map(({ label, value }) => (
-                        <div
-                          key={label}
-                          className="flex justify-between text-sm"
-                        >
-                          <span className="text-gray-500">{label}</span>
-                          <span className="font-medium text-gray-800">
-                            {value}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
+                          {s.stock}
+                          {s.stock === 0 && (
+                            <span className="ml-2 text-xs bg-red-100 text-red-500 px-2 py-0.5 rounded-full font-semibold">
+                              Habis
+                            </span>
+                          )}
+                          {s.stock > 0 && s.stock < 10 && (
+                            <span className="ml-2 text-xs bg-yellow-100 text-yellow-600 px-2 py-0.5 rounded-full font-semibold">
+                              Hampir habis
+                            </span>
+                          )}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4 font-semibold text-[#1a1a1a]">
+                        {formatRupiah(s.price)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
@@ -347,4 +582,4 @@ const OrdersPage: React.FC = () => {
   );
 };
 
-export default OrdersPage;
+export default AdminPage;
