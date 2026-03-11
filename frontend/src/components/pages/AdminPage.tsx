@@ -41,7 +41,6 @@ const formatRupiah = (n: number) =>
     minimumFractionDigits: 0,
   }).format(n);
 
-// ── SVG Icons ────────────────────────────────────────────────────────────────
 const IconRevenue = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -108,7 +107,6 @@ const IconNoTicket = () => (
     <path d="M560-440q-42 0-71-29t-29-71q0-42 29-71t71-29q42 0 71 29t29 71q0 42-29 71t-71 29ZM280-320q-33 0-56.5-23.5T200-400v-320q0-33 23.5-56.5T280-800h560q33 0 56.5 23.5T920-720v320q0 33-23.5 56.5T840-320H280Zm80-80h400q0-33 23.5-56.5T840-480v-160q-33 0-56.5-23.5T760-720H360q0 33-23.5 56.5T280-640v160q33 0 56.5 23.5T360-400Zm-240 240q-33 0-56.5-23.5T40-240v-440h80v440h680v80H120Zm160-400Z" />
   </svg>
 );
-// ─────────────────────────────────────────────────────────────────────────────
 
 const AdminPage: React.FC = () => {
   const navigate = useNavigate();
@@ -120,15 +118,6 @@ const AdminPage: React.FC = () => {
   const [orderPage, setOrderPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("");
   const [stocks, setStocks] = useState<TicketStock[]>([]);
-  const [stockForm, setStockForm] = useState({
-    section: "",
-    type: "",
-    stock: 0,
-    price: 0,
-  });
-  const [saving, setSaving] = useState(false);
-  const [saveMsg, setSaveMsg] = useState("");
-  const [saveMsgType, setSaveMsgType] = useState<"ok" | "err">("ok");
 
   useEffect(() => {
     adminService.getStats().then(setStats).catch(console.error);
@@ -150,26 +139,6 @@ const AdminPage: React.FC = () => {
     if (tab !== "stocks") return;
     adminService.getTicketStocks().then(setStocks).catch(console.error);
   }, [tab]);
-
-  const handleUpsertStock = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    setSaveMsg("");
-    try {
-      await adminService.upsertTicketStock(stockForm);
-      const refreshed = await adminService.getTicketStocks();
-      setStocks(refreshed);
-      setStockForm({ section: "", type: "", stock: 0, price: 0 });
-      setSaveMsgType("ok");
-      setSaveMsg("Saved!");
-    } catch {
-      setSaveMsgType("err");
-      setSaveMsg("Failed to save.");
-    } finally {
-      setSaving(false);
-      setTimeout(() => setSaveMsg(""), 3000);
-    }
-  };
 
   const STAT_CARDS = [
     {
@@ -491,184 +460,72 @@ const AdminPage: React.FC = () => {
 
         {/* ── TICKET STOCK ── */}
         {tab === "stocks" && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-2xl shadow-sm p-6">
-              <h2 className="font-bold text-[#1a1a1a] text-lg mb-6">
-                Add / Update Stock
-              </h2>
-              <form
-                onSubmit={handleUpsertStock}
-                className="grid grid-cols-2 md:grid-cols-4 gap-4"
-              >
-                {[
-                  {
-                    label: "Section",
-                    placeholder: "e.g. VIP",
-                    key: "section" as const,
-                    type: "text",
-                  },
-                  {
-                    label: "Type",
-                    placeholder: "e.g. standing",
-                    key: "type" as const,
-                    type: "text",
-                  },
-                ].map(({ label, placeholder, key, type }) => (
-                  <div key={key} className="flex flex-col gap-2">
-                    <label className="text-sm font-medium text-[#1a1a1a]">
-                      {label}
-                    </label>
-                    <input
-                      type={type}
-                      placeholder={placeholder}
-                      className="bg-[#f0f0f0] border-none rounded-full px-5 py-3 text-sm focus:outline-none focus:bg-[#e8e8e8] transition-colors"
-                      value={stockForm[key]}
-                      onChange={(e) =>
-                        setStockForm((f) => ({ ...f, [key]: e.target.value }))
-                      }
-                      required
-                    />
-                  </div>
-                ))}
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium text-[#1a1a1a]">
-                    Stock (qty)
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    className="bg-[#f0f0f0] border-none rounded-full px-5 py-3 text-sm focus:outline-none focus:bg-[#e8e8e8] transition-colors"
-                    value={stockForm.stock}
-                    onChange={(e) =>
-                      setStockForm((f) => ({
-                        ...f,
-                        stock: Number(e.target.value),
-                      }))
-                    }
-                    required
-                  />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium text-[#1a1a1a]">
-                    Price (Rp)
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    className="bg-[#f0f0f0] border-none rounded-full px-5 py-3 text-sm focus:outline-none focus:bg-[#e8e8e8] transition-colors"
-                    value={stockForm.price}
-                    onChange={(e) =>
-                      setStockForm((f) => ({
-                        ...f,
-                        price: Number(e.target.value),
-                      }))
-                    }
-                    required
-                  />
-                </div>
-                <div className="col-span-2 md:col-span-4 flex items-center gap-4 mt-2">
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="bg-[#1a1a1a] hover:bg-[#333] text-white rounded-full px-8 py-3 text-sm font-semibold disabled:opacity-50 transition-colors"
-                  >
-                    {saving ? "Saving..." : "Save Stock"}
-                  </button>
-                  {saveMsg && (
-                    <span
-                      className={`text-sm font-medium flex items-center gap-1.5 ${saveMsgType === "ok" ? "text-green-600" : "text-red-500"}`}
+          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[#f0f0f0]">
+                  {["Section", "Type", "Stock", "Price"].map((h) => (
+                    <th
+                      key={h}
+                      className="px-5 py-4 text-left text-xs font-semibold text-[#999] uppercase tracking-wider"
                     >
-                      {saveMsgType === "ok" ? (
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          height="16"
-                          viewBox="0 -960 960 960"
-                          width="16"
-                          fill="currentColor"
-                        >
-                          <path d="m424-296 282-282-56-56-226 226-114-114-56 56 170 170Z" />
-                        </svg>
-                      ) : (
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          height="16"
-                          viewBox="0 -960 960 960"
-                          width="16"
-                          fill="currentColor"
-                        >
-                          <path d="M480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Zm-40 200h80v-240h-80v240Zm40-320q17 0 28.5-11.5T520-640q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640q0 17 11.5 28.5T480-600Z" />
-                        </svg>
-                      )}
-                      {saveMsg}
-                    </span>
-                  )}
-                </div>
-              </form>
-            </div>
-
-            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[#f0f0f0]">
-                    {["Section", "Type", "Stock", "Price"].map((h) => (
-                      <th
-                        key={h}
-                        className="px-5 py-4 text-left text-xs font-semibold text-[#999] uppercase tracking-wider"
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {stocks.length === 0 && (
-                    <tr>
-                      <td colSpan={4} className="text-center py-16 text-[#999]">
-                        <div className="flex justify-center mb-3 text-[#ccc]">
-                          <IconNoTicket />
-                        </div>
-                        <p className="text-sm">
-                          No stocks configured yet. Add one above.
-                        </p>
-                      </td>
-                    </tr>
-                  )}
-                  {stocks.map((s) => (
-                    <tr
-                      key={s.id}
-                      className="border-b border-[#f5f5f5] last:border-0 hover:bg-[#fafafa] transition-colors"
-                    >
-                      <td className="px-5 py-4 font-bold text-[#1a1a1a]">
-                        {s.section}
-                      </td>
-                      <td className="px-5 py-4 text-[#666] capitalize">
-                        {s.type}
-                      </td>
-                      <td className="px-5 py-4">
-                        <span
-                          className={`font-bold ${s.stock === 0 ? "text-red-500" : s.stock < 10 ? "text-yellow-500" : "text-[#1a1a1a]"}`}
-                        >
-                          {s.stock}
-                          {s.stock === 0 && (
-                            <span className="ml-2 text-xs bg-red-100 text-red-500 px-2 py-0.5 rounded-full font-semibold">
-                              Habis
-                            </span>
-                          )}
-                          {s.stock > 0 && s.stock < 10 && (
-                            <span className="ml-2 text-xs bg-yellow-100 text-yellow-600 px-2 py-0.5 rounded-full font-semibold">
-                              Hampir habis
-                            </span>
-                          )}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4 font-semibold text-[#1a1a1a]">
-                        {formatRupiah(s.price)}
-                      </td>
-                    </tr>
+                      {h}
+                    </th>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </tr>
+              </thead>
+              <tbody>
+                {stocks.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="text-center py-16 text-[#999]">
+                      <div className="flex justify-center mb-3 text-[#ccc]">
+                        <IconNoTicket />
+                      </div>
+                      <p className="text-sm">No stocks configured yet.</p>
+                    </td>
+                  </tr>
+                )}
+                {stocks.map((s) => (
+                  <tr
+                    key={s.id}
+                    className="border-b border-[#f5f5f5] last:border-0 hover:bg-[#fafafa] transition-colors"
+                  >
+                    <td className="px-5 py-4 font-bold text-[#1a1a1a]">
+                      {s.section}
+                    </td>
+                    <td className="px-5 py-4 text-[#666] capitalize">
+                      {s.type}
+                    </td>
+                    <td className="px-5 py-4">
+                      <span
+                        className={`font-bold ${
+                          s.stock === 0
+                            ? "text-red-500"
+                            : s.stock < 10
+                              ? "text-yellow-500"
+                              : "text-[#1a1a1a]"
+                        }`}
+                      >
+                        {s.stock}
+                        {s.stock === 0 && (
+                          <span className="ml-2 text-xs bg-red-100 text-red-500 px-2 py-0.5 rounded-full font-semibold">
+                            Habis
+                          </span>
+                        )}
+                        {s.stock > 0 && s.stock < 10 && (
+                          <span className="ml-2 text-xs bg-yellow-100 text-yellow-600 px-2 py-0.5 rounded-full font-semibold">
+                            Hampir habis
+                          </span>
+                        )}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 font-semibold text-[#1a1a1a]">
+                      {formatRupiah(s.price)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

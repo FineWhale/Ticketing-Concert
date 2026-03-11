@@ -37,6 +37,16 @@ export const adminService = {
     return res.data.data ?? [];
   },
 
+  // Dipakai untuk inline-edit (update by ID)
+  async updateTicketStock(
+    id: string,
+    payload: { stock?: number; price?: number },
+  ) {
+    const res = await api.patch(`/admin/ticket-stocks/${id}`, payload);
+    return res.data.data;
+  },
+
+  // Tetap ada untuk backward compat jika masih dipakai
   async upsertTicketStock(payload: {
     section: string;
     type: string;

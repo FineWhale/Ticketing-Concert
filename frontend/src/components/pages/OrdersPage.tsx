@@ -45,12 +45,15 @@ const TYPE_BADGE: Record<string, string> = {
   General: "bg-gray-100 text-gray-600",
 };
 
+const API_BASE = "http://localhost:5000/api";
+
 const OrdersPage: React.FC = () => {
   const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+  const [syncingOrder, setSyncingOrder] = useState<string | null>(null);
 
   const formatPrice = (price: number) =>
     new Intl.NumberFormat("id-ID", {
@@ -59,25 +62,26 @@ const OrdersPage: React.FC = () => {
       minimumFractionDigits: 0,
     }).format(price);
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("id-ID", {
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString("id-ID", {
       day: "numeric",
       month: "long",
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
+
+  const getToken = () => localStorage.getItem("authToken");
 
   const fetchOrders = async () => {
-    const token = localStorage.getItem("authToken");
+    const token = getToken();
     if (!token) {
       navigate("/login");
       return;
     }
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:5000/api/orders", {
+      const response = await fetch(`${API_BASE}/orders`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.status === 401) {
@@ -94,25 +98,67 @@ const OrdersPage: React.FC = () => {
     }
   };
 
+  // Sync status satu order ke Midtrans, update state lokal
+  const syncStatus = async (orderCode: string): Promise<string> => {
+    try {
+      const token = getToken();
+      const res = await fetch(`${API_BASE}/orders/${orderCode}/sync-status`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return "pending";
+      const data = await res.json();
+      const newStatus = data.status ?? "pending";
+      // Update order di state tanpa refetch semua
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.orderCode === orderCode ? { ...o, status: newStatus } : o,
+        ),
+      );
+      return newStatus;
+    } catch {
+      return "pending";
+    }
+  };
+
   useEffect(() => {
     fetchOrders();
   }, [navigate]);
+
+  // Auto-sync semua order yang masih pending saat halaman dibuka
+  useEffect(() => {
+    if (orders.length === 0) return;
+    const pendingOrders = orders.filter((o) => o.status === "pending");
+    pendingOrders.forEach((o) => syncStatus(o.orderCode));
+  }, [orders.length]); // eslint-disable-line
 
   const toggleExpand = (orderCode: string) => {
     setExpandedOrder(expandedOrder === orderCode ? null : orderCode);
   };
 
-  const handleContinuePayment = (snapToken: string) => {
-    if ((window as any).snap) {
-      (window as any).snap.pay(snapToken, {
-        onSuccess: () => fetchOrders(),
-        onPending: () => fetchOrders(),
-        onError: () => alert("Pembayaran gagal, silakan coba lagi."),
-        onClose: () => {},
-      });
-    } else {
+  const handleContinuePayment = (order: Order) => {
+    if (!(window as any).snap) {
       alert("Midtrans Snap belum siap, coba refresh halaman.");
+      return;
     }
+
+    (window as any).snap.pay(order.snapToken, {
+      onSuccess: async () => {
+        await syncStatus(order.orderCode);
+      },
+      onPending: async () => {
+        await syncStatus(order.orderCode);
+      },
+      onError: async () => {
+        await syncStatus(order.orderCode);
+        alert("Pembayaran gagal, silakan coba lagi.");
+      },
+      onClose: async () => {
+        setSyncingOrder(order.orderCode);
+        await syncStatus(order.orderCode);
+        setSyncingOrder(null);
+      },
+    });
   };
 
   return (
@@ -123,7 +169,6 @@ const OrdersPage: React.FC = () => {
       />
 
       <div className="max-w-lg mx-auto py-10 px-4">
-        {/* BACK BUTTON */}
         <button
           onClick={() => navigate("/")}
           className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-6 transition-colors"
@@ -212,7 +257,9 @@ const OrdersPage: React.FC = () => {
                     <span
                       className={`text-[11px] font-semibold px-3 py-1 rounded-full ${STATUS_STYLE[order.status] || "bg-gray-100 text-gray-500"}`}
                     >
-                      {STATUS_LABEL[order.status] || order.status}
+                      {syncingOrder === order.orderCode
+                        ? "Mengecek..."
+                        : STATUS_LABEL[order.status] || order.status}
                     </span>
                   </div>
 
@@ -263,8 +310,8 @@ const OrdersPage: React.FC = () => {
                   {/* LANJUTKAN PEMBAYARAN */}
                   {order.status === "pending" && order.snapToken && (
                     <button
-                      onClick={() => handleContinuePayment(order.snapToken)}
-                      className="mt-3 w-full py-2.5 bg-yellow text-gray-900 rounded-full text-sm font-bold hover:brightness-95 transition-all"
+                      onClick={() => handleContinuePayment(order)}
+                      className="mt-3 w-full py-2.5 bg-[#fee505] text-gray-900 rounded-full text-sm font-bold hover:brightness-95 transition-all"
                     >
                       Lanjutkan Pembayaran
                     </button>

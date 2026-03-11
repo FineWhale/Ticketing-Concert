@@ -14,6 +14,8 @@ const TYPE_BADGE: Record<string, string> = {
 
 const STEPS: CheckoutStep[] = ["summary", "form", "success"];
 
+const API_BASE = "http://localhost:5000/api";
+
 const CheckoutPage: React.FC = () => {
   const navigate = useNavigate();
   const { cart, totalPrice, totalItems, clearCart } = useCartContext();
@@ -36,17 +38,31 @@ const CheckoutPage: React.FC = () => {
       minimumFractionDigits: 0,
     }).format(price);
 
+  // Sync status ke backend (cek langsung ke Midtrans), return status terbaru
+  const syncStatus = async (orderCode: string): Promise<string> => {
+    try {
+      const token = localStorage.getItem("authToken");
+      const res = await fetch(`${API_BASE}/orders/${orderCode}/sync-status`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return "pending";
+      const data = await res.json();
+      return data.status ?? "pending";
+    } catch {
+      return "pending";
+    }
+  };
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
       const token = localStorage.getItem("authToken");
-
-      // Kumpulkan semua seatIds dari cart (hanya CAT2 & CAT4)
       const allSeatIds = cart.flatMap((item) => item.seatIds ?? []);
 
-      const response = await fetch("http://localhost:5000/api/orders", {
+      const response = await fetch(`${API_BASE}/orders`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -81,19 +97,31 @@ const CheckoutPage: React.FC = () => {
       }
 
       (window as any).snap.pay(data.snapToken, {
-        onSuccess: () => {
+        onSuccess: async () => {
+          await syncStatus(data.orderCode);
           clearCart();
           setStep("success");
         },
-        onPending: () => {
+        onPending: async () => {
+          await syncStatus(data.orderCode);
           clearCart();
           setStep("success");
         },
-        onError: () => {
+        onError: async () => {
+          await syncStatus(data.orderCode);
           alert("Pembayaran gagal, silakan coba lagi.");
         },
-        onClose: () => {
-          alert("Pembayaran dibatalkan.");
+        onClose: async () => {
+          // User tutup window — sync dulu, baru kasih info
+          const status = await syncStatus(data.orderCode);
+          if (status === "paid") {
+            clearCart();
+            setStep("success");
+          } else {
+            alert(
+              "Pembayaran belum selesai. Kamu bisa lanjutkan dari halaman My Orders.",
+            );
+          }
         },
       });
     } catch (error: any) {
@@ -193,7 +221,6 @@ const CheckoutPage: React.FC = () => {
                           {item.quantity} tiket
                         </span>
                       </div>
-                      {/* Tampilkan seat labels kalau seated */}
                       {item.seatLabels && item.seatLabels.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1.5">
                           {item.seatLabels.map((label) => (

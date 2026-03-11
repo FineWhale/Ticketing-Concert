@@ -61,5 +61,12 @@ func (h *PaymentHandler) HandleNotification(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
+	// ✅ Jika payment gagal/expired → kembalikan stock ke ticket_stocks
+	if status == "failed" {
+		if err := h.orderService.ReleaseStockForOrder(orderCode); err != nil {
+			fmt.Printf("Warning: failed to release stock for order %s: %v\n", orderCode, err)
+		}
+	}
+
 	return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 }

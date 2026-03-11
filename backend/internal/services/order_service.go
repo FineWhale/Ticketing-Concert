@@ -8,27 +8,31 @@ import (
 
 	"beachboys-concert-backend/internal/models"
 	"beachboys-concert-backend/internal/repository"
+
+	"gorm.io/gorm"
 )
 
 type OrderService struct {
 	orderRepo       *repository.OrderRepository
 	midtransService *MidtransService
-	seatService     *SeatService // ← tambah
+	seatService     *SeatService
+	db              *gorm.DB
 }
 
 func NewOrderService(
 	orderRepo *repository.OrderRepository,
 	midtransService *MidtransService,
 	seatService *SeatService,
+	db *gorm.DB,
 ) *OrderService {
 	return &OrderService{
 		orderRepo:       orderRepo,
 		midtransService: midtransService,
 		seatService:     seatService,
+		db:              db,
 	}
 }
 
-// validateItemsConcurrently — Go concurrency: validasi semua item secara parallel
 func (s *OrderService) validateItemsConcurrently(items []models.OrderItemRequest) (int64, error) {
 	type result struct {
 		subtotal int64
@@ -70,21 +74,70 @@ func (s *OrderService) validateItemsConcurrently(items []models.OrderItemRequest
 	return totalAmount, nil
 }
 
+func (s *OrderService) reserveStock(items []models.OrderItemRequest) error {
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		for _, item := range items {
+			result := tx.Model(&models.TicketStock{}).
+				Where("section = ? AND type = ? AND stock >= ?", item.Section, item.Type, item.Quantity).
+				Update("stock", gorm.Expr("stock - ?", item.Quantity))
+			if result.Error != nil {
+				return result.Error
+			}
+			if result.RowsAffected == 0 {
+				return fmt.Errorf("stok tidak cukup untuk section %s (%s)", item.Section, item.Type)
+			}
+		}
+		return nil
+	})
+}
+
+func (s *OrderService) releaseStock(items []models.OrderItem) error {
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		for _, item := range items {
+			tx.Model(&models.TicketStock{}).
+				Where("section = ? AND type = ?", item.Section, item.Type).
+				Update("stock", gorm.Expr("stock + ?", item.Quantity))
+		}
+		return nil
+	})
+}
+
+func (s *OrderService) releaseStockFromRequest(items []models.OrderItemRequest) error {
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		for _, item := range items {
+			tx.Model(&models.TicketStock{}).
+				Where("section = ? AND type = ?", item.Section, item.Type).
+				Update("stock", gorm.Expr("stock + ?", item.Quantity))
+		}
+		return nil
+	})
+}
+
+func (s *OrderService) ReleaseStockForOrder(orderCode string) error {
+	order, err := s.orderRepo.FindByOrderCode(orderCode)
+	if err != nil || order == nil {
+		return err
+	}
+	return s.releaseStock(order.Items)
+}
+
 func (s *OrderService) CreateOrder(userID string, req *models.CreateOrderRequest) (*models.CreateOrderResponse, error) {
 	if len(req.Items) == 0 {
 		return nil, errors.New("order must have at least one item")
 	}
 
-	// ✅ Concurrent validation
 	totalAmount, err := s.validateItemsConcurrently(req.Items)
 	if err != nil {
 		return nil, err
 	}
 
-	// ✅ Jika ada seat yang dipilih (CAT2/CAT4), reserve dulu sebelum order dibuat
-	// Kalau reserve gagal (seat sudah diambil orang lain), batalkan langsung
+	if err := s.reserveStock(req.Items); err != nil {
+		return nil, err
+	}
+
 	if len(req.SeatIDs) > 0 {
 		if err := s.seatService.ValidateAndReserve(req.SeatIDs); err != nil {
+			_ = s.releaseStockFromRequest(req.Items)
 			return nil, fmt.Errorf("seat reservation failed: %w", err)
 		}
 	}
@@ -102,7 +155,7 @@ func (s *OrderService) CreateOrder(userID string, req *models.CreateOrderRequest
 	}
 
 	if err := s.orderRepo.CreateOrderOnly(order); err != nil {
-		// Kalau order gagal dibuat, release seat yang sudah di-reserve
+		_ = s.releaseStockFromRequest(req.Items)
 		if len(req.SeatIDs) > 0 {
 			_ = s.seatService.ReleaseSeats(req.SeatIDs)
 		}
@@ -121,6 +174,7 @@ func (s *OrderService) CreateOrder(userID string, req *models.CreateOrderRequest
 	}
 
 	if err := s.orderRepo.CreateItems(items); err != nil {
+		_ = s.releaseStockFromRequest(req.Items)
 		if len(req.SeatIDs) > 0 {
 			_ = s.seatService.ReleaseSeats(req.SeatIDs)
 		}
@@ -129,10 +183,8 @@ func (s *OrderService) CreateOrder(userID string, req *models.CreateOrderRequest
 
 	order.Items = items
 
-	// ✅ Tandai seat sebagai sold setelah order berhasil dibuat
 	if len(req.SeatIDs) > 0 {
 		if err := s.seatService.MarkSold(req.SeatIDs, order.ID); err != nil {
-			// Log saja, jangan batalkan order
 			fmt.Printf("Warning: failed to mark seats as sold for order %s: %v\n", order.ID, err)
 		}
 	}
@@ -152,6 +204,43 @@ func (s *OrderService) CreateOrder(userID string, req *models.CreateOrderRequest
 		SnapToken:   snapToken,
 		PaymentURL:  paymentURL,
 	}, nil
+}
+
+// SyncOrderStatus — cek status ke Midtrans lalu update DB
+// Dipanggil dari frontend setelah user selesai di payment page
+func (s *OrderService) SyncOrderStatus(orderCode string) (*models.Order, error) {
+	order, err := s.orderRepo.FindByOrderCode(orderCode)
+	if err != nil {
+		return nil, err
+	}
+	if order == nil {
+		return nil, errors.New("order not found")
+	}
+
+	// Kalau sudah final, tidak perlu cek lagi
+	if order.Status == "paid" || order.Status == "failed" {
+		return order, nil
+	}
+
+	newStatus, err := s.midtransService.CheckTransactionStatus(orderCode)
+	if err != nil {
+		// Kalau gagal cek (misal order belum ada di Midtrans), kembalikan order apa adanya
+		return order, nil
+	}
+
+	if newStatus != order.Status {
+		_ = s.orderRepo.UpdateStatus(orderCode, newStatus)
+		order.Status = newStatus
+
+		// Jika failed → release stock
+		if newStatus == "failed" {
+			if err := s.releaseStock(order.Items); err != nil {
+				fmt.Printf("Warning: failed to release stock for order %s: %v\n", orderCode, err)
+			}
+		}
+	}
+
+	return order, nil
 }
 
 func (s *OrderService) GetOrderByCode(orderCode string) (*models.Order, error) {

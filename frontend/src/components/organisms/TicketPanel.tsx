@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCartContext } from "../../context/CartContext";
 import { SeatPickerModal } from "./SeatPickerModal";
@@ -6,9 +6,12 @@ import type { Seat } from "./types";
 
 type BlockID = "i" | "j" | "k" | "l";
 
-interface TicketPanelProps {
-  onOpenSeatPicker?: (block: BlockID) => void;
-}
+const SECTION_TO_BLOCK: Record<string, BlockID> = {
+  "CAT 2 I": "i",
+  "CAT 2 J": "j",
+  "CAT 4 K": "k",
+  "CAT 4 L": "l",
+};
 
 interface TicketListing {
   id: string;
@@ -19,97 +22,6 @@ interface TicketListing {
   block?: BlockID;
 }
 
-const MOCKLISTINGS: TicketListing[] = [
-  {
-    id: "cat1a",
-    section: "CAT 1 A",
-    type: "VIP",
-    priceEach: 2500000,
-    available: 42,
-  },
-  {
-    id: "cat1b",
-    section: "CAT 1 B",
-    type: "VIP",
-    priceEach: 2500000,
-    available: 38,
-  },
-  {
-    id: "cat1c",
-    section: "CAT 1 C",
-    type: "VIP",
-    priceEach: 2500000,
-    available: 55,
-  },
-  {
-    id: "cat1d",
-    section: "CAT 1 D",
-    type: "VIP",
-    priceEach: 2500000,
-    available: 40,
-  },
-  {
-    id: "cat1e",
-    section: "CAT 1 E",
-    type: "VIP",
-    priceEach: 2500000,
-    available: 45,
-  },
-  {
-    id: "cat1f",
-    section: "CAT 1 F",
-    type: "VIP",
-    priceEach: 2500000,
-    available: 52,
-  },
-  {
-    id: "cat2i",
-    section: "CAT 2 I",
-    type: "Premium",
-    priceEach: 1500000,
-    available: 120,
-    block: "i",
-  },
-  {
-    id: "cat2j",
-    section: "CAT 2 J",
-    type: "Premium",
-    priceEach: 1500000,
-    available: 115,
-    block: "j",
-  },
-  {
-    id: "cat3g",
-    section: "CAT 3 G",
-    type: "Regular",
-    priceEach: 1200000,
-    available: 80,
-  },
-  {
-    id: "cat3h",
-    section: "CAT 3 H",
-    type: "Regular",
-    priceEach: 1200000,
-    available: 78,
-  },
-  {
-    id: "cat4k",
-    section: "CAT 4 K",
-    type: "General",
-    priceEach: 750000,
-    available: 200,
-    block: "k",
-  },
-  {
-    id: "cat4l",
-    section: "CAT 4 L",
-    type: "General",
-    priceEach: 750000,
-    available: 195,
-    block: "l",
-  },
-];
-
 const TYPE_BADGE: Record<string, string> = {
   VIP: "bg-yellow-100 text-yellow-700",
   Premium: "bg-blue-100 text-blue-700",
@@ -117,27 +29,60 @@ const TYPE_BADGE: Record<string, string> = {
   General: "bg-gray-100 text-gray-600",
 };
 
-// Map block → listing section+type untuk cari di cart
-const BLOCK_TO_LISTING: Record<BlockID, { section: string; type: string }> = {
-  i: { section: "CAT 2 I", type: "Premium" },
-  j: { section: "CAT 2 J", type: "Premium" },
-  k: { section: "CAT 4 K", type: "General" },
-  l: { section: "CAT 4 L", type: "General" },
-};
+const API_BASE =
+  process.env.REACT_APP_API_BASE_URL || "http://localhost:5000/api";
 
-export const TicketPanel: React.FC<TicketPanelProps> = ({
-  onOpenSeatPicker: _externalPicker,
-}) => {
+export const TicketPanel: React.FC = () => {
   const navigate = useNavigate();
   const { cart, addItem, decreaseItem, removeItem, totalItems, totalPrice } =
     useCartContext();
 
+  const [listings, setListings] = useState<TicketListing[]>([]);
+  const [loadingListings, setLoadingListings] = useState(true);
+  const [fetchError, setFetchError] = useState("");
   const [sortTab, setSortTab] = useState<"lowest" | "best">("lowest");
   const [priceFilter, setPriceFilter] = useState("All");
   const [typeFilter, setTypeFilter] = useState("All");
-
-  // Internal seat picker state
   const [pickerBlock, setPickerBlock] = useState<BlockID | null>(null);
+
+  const fetchStocks = async () => {
+    setLoadingListings(true);
+    setFetchError("");
+    try {
+      const res = await fetch(`${API_BASE}/ticket-stocks`);
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
+      const json = await res.json();
+      const raw: {
+        id: string;
+        section: string;
+        type: string;
+        stock: number;
+        price: number;
+      }[] = json.data ?? json;
+
+      const mapped: TicketListing[] = raw
+        .filter((s) => s.stock > 0)
+        .map((s) => ({
+          id: s.id,
+          section: s.section,
+          type: s.type,
+          priceEach: s.price,
+          available: s.stock,
+          block: SECTION_TO_BLOCK[s.section],
+        }));
+
+      setListings(mapped);
+    } catch (err: any) {
+      console.error("Failed to load ticket stocks:", err);
+      setFetchError("Gagal memuat tiket. Coba refresh halaman.");
+    } finally {
+      setLoadingListings(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStocks();
+  }, []);
 
   const formatPrice = (p: number) =>
     new Intl.NumberFormat("id-ID", {
@@ -146,14 +91,11 @@ export const TicketPanel: React.FC<TicketPanelProps> = ({
       minimumFractionDigits: 0,
     }).format(p);
 
-  // Key konsisten dengan CartContext: section-type untuk standing, section-type-seatIds untuk seated
   const standingKey = (item: TicketListing) => `${item.section}-${item.type}`;
 
-  // Cari cart item untuk standing (by section-type key)
   const getStandingCart = (item: TicketListing) =>
     cart.find((i) => i.id === standingKey(item));
 
-  // Cari semua cart items untuk seated block (bisa > 1 karena tiap set kursi = item terpisah)
   const getSeatedCarts = (item: TicketListing) =>
     cart.filter(
       (i) =>
@@ -169,16 +111,14 @@ export const TicketPanel: React.FC<TicketPanelProps> = ({
     return getStandingCart(item)?.quantity ?? 0;
   };
 
-  // Semua seat IDs yang sudah ada di cart untuk block ini (untuk pre-select di picker)
   const getExistingSeatIds = (block: BlockID): string[] => {
-    const listing = MOCKLISTINGS.find((l) => l.block === block);
+    const listing = listings.find((l) => l.block === block);
     if (!listing) return [];
     return getSeatedCarts(listing).flatMap((i) => i.seatIds);
   };
 
-  // Handler saat user konfirmasi pilih kursi dari modal
   const handleSeatConfirm = (block: BlockID, selectedSeats: Seat[]) => {
-    const listing = MOCKLISTINGS.find((l) => l.block === block);
+    const listing = listings.find((l) => l.block === block);
     if (!listing || selectedSeats.length === 0) return;
 
     const seatIds = selectedSeats.map((s) => s.id);
@@ -198,22 +138,21 @@ export const TicketPanel: React.FC<TicketPanelProps> = ({
     setPickerBlock(null);
   };
 
-  // Untuk seatable: hapus satu cart item seated (item terakhir yang ditambahkan)
   const handleSeatRemove = (item: TicketListing) => {
     const seatedCarts = getSeatedCarts(item);
     if (seatedCarts.length === 0) return;
-    // Hapus item terakhir (LIFO)
     const last = seatedCarts[seatedCarts.length - 1];
     removeItem(last.id);
   };
 
-  const filtered = MOCKLISTINGS.filter((t) => {
-    if (priceFilter === "Under 1M") return t.priceEach < 1000000;
-    if (priceFilter === "1M-2M")
-      return t.priceEach >= 1000000 && t.priceEach <= 2000000;
-    if (priceFilter === "Over 2M") return t.priceEach > 2000000;
-    return true;
-  })
+  const filtered = listings
+    .filter((t) => {
+      if (priceFilter === "Under 1M") return t.priceEach < 1000000;
+      if (priceFilter === "1M-2M")
+        return t.priceEach >= 1000000 && t.priceEach <= 2000000;
+      if (priceFilter === "Over 2M") return t.priceEach > 2000000;
+      return true;
+    })
     .filter((t) => typeFilter === "All" || t.type === typeFilter)
     .sort((a, b) =>
       sortTab === "lowest"
@@ -268,11 +207,45 @@ export const TicketPanel: React.FC<TicketPanelProps> = ({
 
         {/* TICKET LIST */}
         <div className="flex-1 overflow-y-auto flex flex-col gap-3 mb-4 pr-1">
-          {filtered.length === 0 ? (
+          {/* Loading skeleton */}
+          {loadingListings && (
+            <div className="space-y-3">
+              {[1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className="rounded-xl border border-gray-200 bg-white p-4 animate-pulse"
+                >
+                  <div className="h-4 bg-gray-200 rounded w-1/3 mb-2" />
+                  <div className="h-3 bg-gray-100 rounded w-1/4 mb-4" />
+                  <div className="h-3 bg-gray-100 rounded w-1/2" />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Error state */}
+          {!loadingListings && fetchError && (
+            <div className="text-center py-10">
+              <p className="text-sm text-red-400 mb-3">{fetchError}</p>
+              <button
+                onClick={fetchStocks}
+                className="px-4 py-2 bg-gray-900 text-white text-xs font-semibold rounded-full hover:bg-gray-700 transition-colors"
+              >
+                Coba Lagi
+              </button>
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!loadingListings && !fetchError && filtered.length === 0 && (
             <p className="text-center text-gray-400 py-10 text-sm">
               Tidak ada tiket tersedia
             </p>
-          ) : (
+          )}
+
+          {/* Listings */}
+          {!loadingListings &&
+            !fetchError &&
             filtered.map((item) => {
               const qty = getQty(item);
               const isSeatable = !!item.block;
@@ -296,7 +269,7 @@ export const TicketPanel: React.FC<TicketPanelProps> = ({
                       </p>
                       <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                         <span
-                          className={`text-xs font-semibold px-2 py-0.5 rounded-full ${TYPE_BADGE[item.type]}`}
+                          className={`text-xs font-semibold px-2 py-0.5 rounded-full ${TYPE_BADGE[item.type] ?? "bg-gray-100 text-gray-600"}`}
                         >
                           {item.type}
                         </span>
@@ -318,7 +291,7 @@ export const TicketPanel: React.FC<TicketPanelProps> = ({
                     </div>
                   </div>
 
-                  {/* Seat labels chips */}
+                  {/* Seat label chips */}
                   {allLabels.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-2">
                       {allLabels.map((label) => (
@@ -393,8 +366,7 @@ export const TicketPanel: React.FC<TicketPanelProps> = ({
                   </div>
                 </div>
               );
-            })
-          )}
+            })}
         </div>
 
         {/* CART SUMMARY */}
@@ -418,7 +390,7 @@ export const TicketPanel: React.FC<TicketPanelProps> = ({
         )}
       </div>
 
-      {/* Seat Picker Modal — di-mount di dalam TicketPanel sendiri */}
+      {/* Seat Picker Modal */}
       {pickerBlock && (
         <SeatPickerModal
           block={pickerBlock}

@@ -95,6 +95,7 @@ func (h *AdminHandler) GetTicketStocks(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]interface{}{"data": stocks})
 }
 
+// UpsertTicketStock — tetap ada untuk backward compat (POST)
 func (h *AdminHandler) UpsertTicketStock(c echo.Context) error {
 	var req models.UpsertStockRequest
 	if err := c.Bind(&req); err != nil {
@@ -121,6 +122,44 @@ func (h *AdminHandler) UpsertTicketStock(c echo.Context) error {
 			"price": req.Price,
 		})
 	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{"data": stock})
+}
+
+// UpdateTicketStockByID — PATCH /admin/ticket-stocks/:id
+// Dipakai oleh inline-edit table di frontend
+func (h *AdminHandler) UpdateTicketStockByID(c echo.Context) error {
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "id is required"})
+	}
+
+	var req struct {
+		Stock *int   `json:"stock"`
+		Price *int64 `json:"price"`
+	}
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+	}
+
+	var stock models.TicketStock
+	if err := h.db.Where("id = ?", id).First(&stock).Error; err != nil {
+		return c.JSON(http.StatusNotFound, map[string]string{"error": "ticket stock not found"})
+	}
+
+	updates := map[string]interface{}{}
+	if req.Stock != nil {
+		updates["stock"] = *req.Stock
+	}
+	if req.Price != nil {
+		updates["price"] = *req.Price
+	}
+
+	if len(updates) == 0 {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "nothing to update"})
+	}
+
+	h.db.Model(&stock).Updates(updates)
 
 	return c.JSON(http.StatusOK, map[string]interface{}{"data": stock})
 }

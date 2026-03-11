@@ -6,17 +6,26 @@ import (
 	"beachboys-concert-backend/internal/models"
 
 	"github.com/midtrans/midtrans-go"
+	"github.com/midtrans/midtrans-go/coreapi"
 	"github.com/midtrans/midtrans-go/snap"
 )
 
 type MidtransService struct {
-	client snap.Client
+	client     snap.Client
+	coreClient coreapi.Client
 }
 
 func NewMidtransService(serverKey string) *MidtransService {
 	var client snap.Client
 	client.New(serverKey, midtrans.Sandbox)
-	return &MidtransService{client: client}
+
+	var coreClient coreapi.Client
+	coreClient.New(serverKey, midtrans.Sandbox)
+
+	return &MidtransService{
+		client:     client,
+		coreClient: coreClient,
+	}
 }
 
 func (s *MidtransService) CreateSnapToken(order *models.Order) (string, string, error) {
@@ -49,4 +58,29 @@ func (s *MidtransService) CreateSnapToken(order *models.Order) (string, string, 
 	}
 
 	return snapResp.Token, snapResp.RedirectURL, nil
+}
+
+// CheckTransactionStatus — cek status langsung ke Midtrans Core API
+// Dipakai oleh sync-status endpoint agar tidak bergantung pada webhook
+func (s *MidtransService) CheckTransactionStatus(orderCode string) (string, error) {
+	res, err := s.coreClient.CheckTransaction(orderCode)
+	if err != nil {
+		return "", fmt.Errorf("midtrans check error: %w", err)
+	}
+
+	switch res.TransactionStatus {
+	case "capture":
+		if res.FraudStatus == "accept" {
+			return "paid", nil
+		}
+		return "failed", nil
+	case "settlement":
+		return "paid", nil
+	case "deny", "cancel", "expire":
+		return "failed", nil
+	case "pending":
+		return "pending", nil
+	default:
+		return "pending", nil
+	}
 }

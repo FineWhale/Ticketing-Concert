@@ -38,7 +38,6 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 	fmt.Printf("DEBUG: req = %+v\n", req)
 	fmt.Printf("DEBUG: items count = %d\n", len(req.Items))
 
-	// Basic validation
 	if req.CustomerName == "" || req.CustomerEmail == "" || req.CustomerPhone == "" {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Customer information required"})
 	}
@@ -94,4 +93,21 @@ func (h *OrderHandler) GetUserOrders(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, orders)
+}
+
+// POST /api/orders/:orderCode/sync-status
+// Dipanggil dari frontend setelah user selesai di Midtrans payment page.
+// Cek status langsung ke Midtrans API, update DB, kembalikan order terbaru.
+func (h *OrderHandler) SyncOrderStatus(c echo.Context) error {
+	orderCode := c.Param("orderCode")
+	if orderCode == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Order code required"})
+	}
+
+	order, err := h.orderService.SyncOrderStatus(orderCode)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, order)
 }

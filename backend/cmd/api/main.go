@@ -33,7 +33,6 @@ func main() {
 		log.Fatal("Failed to connect to database:", err)
 	}
 
-	// ✅ Tambah models.Seat ke AutoMigrate
 	if err := db.AutoMigrate(
 		&models.User{},
 		&models.Order{},
@@ -56,7 +55,7 @@ func main() {
 	seatService := services.NewSeatService(seatRepo)
 	orderService := services.NewOrderService(orderRepo, midtransService, seatService)
 
-	// ✅ Seed seats on startup (hanya jika belum ada)
+	// Seed seats on startup (hanya jika belum ada)
 	if err := seatService.SeedIfEmpty(); err != nil {
 		log.Println("Warning: seat seeding failed:", err)
 	}
@@ -116,6 +115,9 @@ func setupRouter(
 	api := e.Group("/api")
 	api.GET("/health", authHandler.HealthCheck)
 
+	// ✅ Public — untuk halaman booking, tidak perlu auth
+	api.GET("/ticket-stocks", adminHandler.GetTicketStocks)
+
 	// Auth
 	auth := api.Group("/auth")
 	auth.POST("/register", authHandler.Register)
@@ -135,12 +137,12 @@ func setupRouter(
 	// Payment webhook
 	api.POST("/payment/notification", paymentHandler.HandleNotification)
 
-	// ✅ Seats (protected — perlu login)
+	// Seats (protected — perlu login)
 	seats := api.Group("/seats")
 	seats.Use(middleware.AuthMiddleware(cfg.JWTSecret))
-	seats.GET("", seatHandler.GetSeats)              // GET /api/seats?section=CAT2
-	seats.POST("/reserve", seatHandler.ReserveSeats) // POST /api/seats/reserve
-	seats.POST("/release", seatHandler.ReleaseSeats) // POST /api/seats/release
+	seats.GET("", seatHandler.GetSeats)
+	seats.POST("/reserve", seatHandler.ReserveSeats)
+	seats.POST("/release", seatHandler.ReleaseSeats)
 
 	// Admin routes
 	admin := api.Group("/admin")
