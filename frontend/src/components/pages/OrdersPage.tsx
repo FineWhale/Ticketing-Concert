@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { QRCodeCanvas } from "qrcode.react";
 import { Header } from "../organisms";
 
 interface OrderItem {
@@ -30,14 +31,12 @@ const STATUS_STYLE: Record<string, string> = {
   failed: "bg-red-100 text-red-600",
   expired: "bg-gray-100 text-gray-500",
 };
-
 const STATUS_LABEL: Record<string, string> = {
   pending: "Menunggu Pembayaran",
   paid: "Lunas",
   failed: "Gagal",
   expired: "Kedaluwarsa",
 };
-
 const TYPE_BADGE: Record<string, string> = {
   VIP: "bg-yellow-100 text-yellow-700",
   Premium: "bg-blue-100 text-blue-700",
@@ -47,6 +46,111 @@ const TYPE_BADGE: Record<string, string> = {
 
 const API_BASE = "http://localhost:5000/api";
 
+/* ── QR Component ── */
+const TicketQR: React.FC<{ orderCode: string; customerName: string }> = ({
+  orderCode,
+  customerName,
+}) => {
+  const canvasRef = useRef<HTMLDivElement>(null);
+
+  const handleDownload = () => {
+    const canvas = canvasRef.current?.querySelector("canvas");
+    if (!canvas) return;
+
+    // Buat canvas baru dengan padding + label di bawah
+    const pad = 24;
+    const labelH = 52;
+    const size = canvas.width;
+    const out = document.createElement("canvas");
+    out.width = size + pad * 2;
+    out.height = size + pad * 2 + labelH;
+    const ctx = out.getContext("2d")!;
+
+    // Background putih
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, out.width, out.height);
+
+    // QR
+    ctx.drawImage(canvas, pad, pad);
+
+    // Label order code
+    ctx.fillStyle = "#1a1a1a";
+    ctx.font = "bold 13px monospace";
+    ctx.textAlign = "center";
+    ctx.fillText(orderCode, out.width / 2, size + pad * 2 + 18);
+
+    // Label nama
+    ctx.fillStyle = "#999";
+    ctx.font = "11px sans-serif";
+    ctx.fillText(customerName, out.width / 2, size + pad * 2 + 36);
+
+    const link = document.createElement("a");
+    link.download = `tiket-${orderCode}.png`;
+    link.href = out.toDataURL("image/png");
+    link.click();
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-3 py-4">
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+        QR Tiket — Tunjukkan di Venue
+      </p>
+
+      {/* QR wrapper dengan border dekoratif */}
+      <div className="relative p-3 rounded-2xl border-2 border-dashed border-gray-200 bg-white shadow-sm">
+        {/* Corner dots */}
+        {[
+          "top-2 left-2",
+          "top-2 right-2",
+          "bottom-2 left-2",
+          "bottom-2 right-2",
+        ].map((pos) => (
+          <span
+            key={pos}
+            className={`absolute w-2.5 h-2.5 rounded-full bg-[#1a1a1a] ${pos}`}
+          />
+        ))}
+        <div ref={canvasRef}>
+          <QRCodeCanvas
+            value={orderCode}
+            size={180}
+            bgColor="#ffffff"
+            fgColor="#1a1a1a"
+            level="H"
+            includeMargin={false}
+          />
+        </div>
+      </div>
+
+      <p className="text-[11px] font-mono font-bold text-gray-700 tracking-widest">
+        {orderCode}
+      </p>
+
+      <button
+        onClick={handleDownload}
+        className="flex items-center gap-2 px-5 py-2 bg-[#1a1a1a] text-white rounded-full text-xs font-semibold hover:bg-[#333] transition-colors"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          height="14"
+          viewBox="0 -960 960 960"
+          width="14"
+          fill="currentColor"
+        >
+          <path d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z" />
+        </svg>
+        Download QR
+      </button>
+
+      <p className="text-[10px] text-gray-400 text-center max-w-[200px]">
+        Simpan atau screenshot QR ini. Akan di-scan oleh petugas saat masuk
+        venue.
+      </p>
+    </div>
+  );
+};
+
+/* ── Main Page ── */
 const OrdersPage: React.FC = () => {
   const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -98,7 +202,6 @@ const OrdersPage: React.FC = () => {
     }
   };
 
-  // Sync status satu order ke Midtrans, update state lokal
   const syncStatus = async (orderCode: string): Promise<string> => {
     try {
       const token = getToken();
@@ -109,7 +212,6 @@ const OrdersPage: React.FC = () => {
       if (!res.ok) return "pending";
       const data = await res.json();
       const newStatus = data.status ?? "pending";
-      // Update order di state tanpa refetch semua
       setOrders((prev) =>
         prev.map((o) =>
           o.orderCode === orderCode ? { ...o, status: newStatus } : o,
@@ -125,11 +227,11 @@ const OrdersPage: React.FC = () => {
     fetchOrders();
   }, [navigate]);
 
-  // Auto-sync semua order yang masih pending saat halaman dibuka
   useEffect(() => {
     if (orders.length === 0) return;
-    const pendingOrders = orders.filter((o) => o.status === "pending");
-    pendingOrders.forEach((o) => syncStatus(o.orderCode));
+    orders
+      .filter((o) => o.status === "pending")
+      .forEach((o) => syncStatus(o.orderCode));
   }, [orders.length]); // eslint-disable-line
 
   const toggleExpand = (orderCode: string) => {
@@ -141,7 +243,6 @@ const OrdersPage: React.FC = () => {
       alert("Midtrans Snap belum siap, coba refresh halaman.");
       return;
     }
-
     (window as any).snap.pay(order.snapToken, {
       onSuccess: async () => {
         await syncStatus(order.orderCode);
@@ -189,7 +290,6 @@ const OrdersPage: React.FC = () => {
           Riwayat pembelian tiket kamu
         </p>
 
-        {/* LOADING */}
         {loading && (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
@@ -205,7 +305,6 @@ const OrdersPage: React.FC = () => {
           </div>
         )}
 
-        {/* ERROR */}
         {error && !loading && (
           <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center">
             <p className="text-red-500 font-medium mb-3">{error}</p>
@@ -218,7 +317,6 @@ const OrdersPage: React.FC = () => {
           </div>
         )}
 
-        {/* EMPTY STATE */}
         {!loading && !error && orders.length === 0 && (
           <div className="bg-white rounded-2xl shadow-sm p-10 text-center">
             <div className="text-5xl mb-4">🎫</div>
@@ -237,7 +335,6 @@ const OrdersPage: React.FC = () => {
           </div>
         )}
 
-        {/* ORDER LIST */}
         {!loading && !error && orders.length > 0 && (
           <div className="space-y-4">
             {orders.map((order) => (
@@ -245,7 +342,7 @@ const OrdersPage: React.FC = () => {
                 key={order.orderCode}
                 className="bg-white rounded-2xl shadow-sm overflow-hidden"
               >
-                {/* ORDER HEADER */}
+                {/* HEADER */}
                 <div className="p-5">
                   <div className="flex items-start justify-between mb-3">
                     <div>
@@ -263,7 +360,6 @@ const OrdersPage: React.FC = () => {
                     </span>
                   </div>
 
-                  {/* CONCERT INFO */}
                   <div className="bg-gray-100 text-black rounded-xl p-4 mb-3">
                     <div className="flex justify-between items-start">
                       <div>
@@ -281,7 +377,6 @@ const OrdersPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* TICKET SUMMARY */}
                   <div className="flex flex-wrap gap-1.5 mb-3">
                     {order.items?.map((item, idx) => (
                       <div key={idx} className="flex items-center gap-1">
@@ -297,7 +392,6 @@ const OrdersPage: React.FC = () => {
                     ))}
                   </div>
 
-                  {/* TOTAL + DATE */}
                   <div className="flex items-center justify-between">
                     <p className="text-xs text-gray-400">
                       {formatDate(order.createdAt)}
@@ -307,7 +401,6 @@ const OrdersPage: React.FC = () => {
                     </p>
                   </div>
 
-                  {/* LANJUTKAN PEMBAYARAN */}
                   {order.status === "pending" && order.snapToken && (
                     <button
                       onClick={() => handleContinuePayment(order)}
@@ -362,7 +455,17 @@ const OrdersPage: React.FC = () => {
                       ))}
                     </div>
 
-                    {/* CUSTOMER INFO */}
+                    {/* QR CODE — hanya muncul jika sudah paid */}
+                    {order.status === "paid" && (
+                      <div className="border border-gray-100 rounded-2xl mb-4 bg-gray-50">
+                        <TicketQR
+                          orderCode={order.orderCode}
+                          customerName={order.customerName}
+                        />
+                      </div>
+                    )}
+
+                    {/* INFO PEMESAN */}
                     <div className="bg-gray-50 rounded-xl p-4 space-y-2">
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                         Info Pemesan
